@@ -1,5 +1,5 @@
-import Peer, {DataConnection} from "peerjs";
-import {message} from "antd";
+import Peer, { DataConnection } from "peerjs";
+import { message } from "antd";
 
 export enum DataType {
     FILE = 'FILE',
@@ -21,7 +21,14 @@ export const PeerConnection = {
     getPeer: () => peer,
     startPeerSession: () => new Promise<string>((resolve, reject) => {
         try {
-            peer = new Peer()
+            peer = new Peer(
+                {
+                    host: '/',
+                    path: '/peerjs',
+                    port: parseInt(window.location.port),
+                    debug: 3
+                }
+            )
             peer.on('open', (id) => {
                 console.log('My ID: ' + id)
                 resolve(id)
@@ -56,15 +63,15 @@ export const PeerConnection = {
             return
         }
         try {
-            let conn = peer.connect(id, {reliable: true})
+            let conn = peer.connect(id, { reliable: true })
             if (!conn) {
                 reject(new Error("Connection can't be established"))
             } else {
-                conn.on('open', function() {
+                conn.on('open', function () {
                     console.log("Connect to: " + id)
                     connectionMap.set(id, conn)
                     resolve()
-                }).on('error', function(err) {
+                }).on('error', function (err) {
                     console.log(err)
                     reject(err)
                 })

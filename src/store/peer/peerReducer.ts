@@ -7,7 +7,7 @@ export const initialState: PeerState = {
     started: false
 }
 
-export const PeerReducer: Reducer<PeerState> = (state = initialState, action) => {
+export const PeerReducer: Reducer<PeerState, any> = (state = initialState, action) => {
     switch (action.type) {
         case PeerActionType.PEER_SESSION_START:
             const {id} = action
