@@ -14,4 +14,4 @@ cp yarn.lock dist/yarn.lock
 cp server.js dist/server.js
 
 cd dist
-tar -czvf webdrop.tar.gz .
+tar -czf webdrop.tar.gz .
