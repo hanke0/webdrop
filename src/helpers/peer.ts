@@ -20,13 +20,23 @@ let connectionMap: Map<string, DataConnection> = new Map<string, DataConnection>
 export const PeerConnection = {
     getPeer: () => peer,
     startPeerSession: () => new Promise<string>((resolve, reject) => {
+        let protocol = window.location.protocol === 'https:' ? true : false;
+        let port = window.location.port;
+        if (!port) {
+            if (protocol) {
+                port = '443'
+            } else {
+                port = '80'
+            }
+        }
         try {
             peer = new Peer(
                 {
                     host: '/',
                     path: '/peerjs',
-                    port: parseInt(window.location.port),
-                    debug: 3
+                    port: parseInt(port),
+                    debug: 3,
+                    secure: protocol,
                 }
             )
             peer.on('open', (id) => {
