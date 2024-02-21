@@ -2,6 +2,7 @@
 
 set -Eeo pipefail
 
+yarn install
 yarn build
 
 rm -rf dist
