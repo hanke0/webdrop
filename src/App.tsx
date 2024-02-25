@@ -18,6 +18,7 @@ import { Room } from "./components/room";
 type ConnItemValue = {
   id: string
   fullName: string
+  hasListenData?: boolean
   conn?: Connection
 }
 
@@ -90,21 +91,24 @@ export default function Home() {
 
   const onConnectionOpen = (id: string, conn: Connection) => {
     console.log("connection open:", id);
-    if (sItems.find((item) => item.value.id === id)) {
-      console.log("connection already exists:", id);
+    let item = sItems.find((item) => item.value.id === id)
+    if (!item) {
+      const [, user] = parseRoomAndName(id);
+
+      const value: ConnItemValue = { id: id, conn: conn, fullName: id };
+      if (user) {
+        value.fullName = user.fullName;
+      }
+
+      console.log("add connection:", value.fullName);
+      item = { id: sItems.length + 1, value: value, selected: false };
+      const items = [...sItems, item];
+      setItems(items);
+    }
+
+    if (item.value.hasListenData) {
       return;
     }
-    const [, user] = parseRoomAndName(id);
-
-    const value: ConnItemValue = { id: id, conn: conn, fullName: id };
-    if (user) {
-      value.fullName = user.fullName;
-    }
-
-    console.log("add connection:", value.fullName);
-    const item = { id: sItems.length + 1, value: value, selected: false };
-    const items = [...sItems, item];
-    setItems(items);
 
     conn.onReceive((data) => {
       console.log("receive data:", data.type, data.name);
@@ -120,6 +124,7 @@ export default function Home() {
       const items = sItems.filter((item) => item.value.fullName !== id);
       setItems(items);
     })
+    item.value.hasListenData = true;
   }
 
   const onConnectUser = (fullName: string) => {
@@ -187,9 +192,9 @@ export default function Home() {
     if (!item.value.conn) {
       const conn = sPeer.connect(item.value.fullName);
       conn.onOpen(() => {
+        onConnectionOpen(conn.id, conn);
         item.value.conn = conn;
         sendFile(file, conn)
-        onConnectionOpen(conn.id, conn);
       })
     } else {
       sendFile(file, item.value.conn)
