@@ -1,8 +1,0 @@
-{
-    "watch": [
-        "server.ts",
-        "src"
-    ],
-    "exec": "npm run peer",
-    "ext": "js ts"
-  }

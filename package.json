@@ -9,7 +9,8 @@
     "build": "tsc && vite build && npm run build-server",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 2",
     "build-server": "tsc -m commonjs -t es5 --allowJs --esModuleInterop server.cts",
-    "serve": "node server.cjs"
+    "serve": "node server.cjs",
+    "fmt": "prettier --write ."
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -39,25 +40,9 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "nodemon": "^3.1.0",
     "postcss": "^8.4.35",
+    "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "vite": "^5.1.4"
-  },
-  "nodemonConfig": {
-    "ignore": [
-      "**/*.test.ts",
-      "**/*.test.tsx",
-      "node_modules",
-      ".git"
-    ],
-    "exec": "npm run build && npm run serve",
-    "watch": [
-      "src",
-      "server.cts"
-    ],
-    "ext": "tsx ts cjs cts js json css",
-    "env": {
-      "NODE_ENV": "development"
-    }
   }
 }
