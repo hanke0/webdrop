@@ -61,6 +61,12 @@ export default function Home() {
       }
     }
     setRoom(roomID);
+  }, [])
+
+  useEffect(() => {
+    if (!sRoom || !sUser) {
+      return
+    }
     console.log(`room: ${sRoom}, user:${sUser.fullName}`);
     const peer = new P2P({
       room: sRoom,
@@ -80,7 +86,7 @@ export default function Home() {
     })
     peer.onConnection(onConnectionOpen)
     setPeer(peer);
-  }, [])
+  }, [sRoom, sUser])
 
   const onConnectionOpen = (id: string, conn: Connection) => {
     console.log("connection open:", id);
