@@ -5,16 +5,14 @@ set -Eeo pipefail
 cd "$(dirname "$0")/.."
 pwd
 
-yarn install
-yarn build
+npm i 
+npm run build
 
-rm -rf dist
-mkdir dist
-cp -r build dist/
-cp -r node_modules dist/node_modules
-cp package.json dist/package.json
-cp yarn.lock dist/yarn.lock
-cp server.js dist/server.js
-
-cd dist
+rm -rf release
+mkdir release
+cp -r dist release/
+cp -r node_modules release/node_modules
+cp package.json release/package.json
+cp server.cjs release/server.cjs
+cd release
 tar -czf ../webdrop.tar.gz .
