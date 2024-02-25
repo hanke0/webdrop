@@ -1,4 +1,5 @@
 import { sample, sampleSize } from 'lodash'
+
 import { icons, prefixes } from './names'
 
 export type Username = {

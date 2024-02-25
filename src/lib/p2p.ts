@@ -1,4 +1,5 @@
-import { Peer, PeerOptions, LogLevel, DataConnection } from 'peerjs'
+import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
+
 import { Username, parseName } from './room'
 
 export type Data = {

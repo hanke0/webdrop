@@ -1,10 +1,11 @@
-import { Username, isGoodRoom } from '../lib/room'
-import { Dialog } from './dialog'
-import QRCode from 'react-qr-code'
-import { CodeBox } from './codebox'
-import { toast } from 'react-hot-toast'
 import { useRef } from 'react'
+import { toast } from 'react-hot-toast'
+import QRCode from 'react-qr-code'
+
+import { CodeBox } from './codebox'
+import { Dialog } from './dialog'
 import { getRoomURL } from '../lib/client'
+import { Username, isGoodRoom } from '../lib/room'
 
 export type RoomProps = {
   currentRoom: string

@@ -8,6 +8,7 @@
     "dev": "tsc && vite dev",
     "build": "tsc && vite build && npm run build-server",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 2",
+    "lint:fix": "npm run lint -- --fix",
     "build-server": "tsc -m commonjs -t es5 --allowJs --esModuleInterop server.cts",
     "serve": "node server.cjs",
     "fmt": "prettier --write ."
@@ -36,6 +37,8 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.56.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "nodemon": "^3.1.0",

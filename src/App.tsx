@@ -1,24 +1,25 @@
-import { Card } from './components/card'
-import { Upload } from './components/upload'
-import { List, Item, Items } from './components/list'
+import fileDownload from 'js-file-download'
 import { useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
+
+import { Button } from './components/button'
+import { Card } from './components/card'
 import { Dialog } from './components/dialog'
+import { Fresh } from './components/fresh'
+import { InputBox } from './components/inputbox'
+import { Item, Items, List } from './components/list'
+import { Room } from './components/room'
+import { Upload } from './components/upload'
+import { UserHead } from './components/user-head'
+import { getRoomAndUid, getRoomFromCookie } from './lib/client'
+import config from './lib/config'
+import { Connection, Data, P2P } from './lib/p2p'
 import {
+  generateName,
   isGoodRoom,
   parseRoomAndName,
-  generateName,
   parseName as parseUsername,
 } from './lib/room'
-import { getRoomAndUid, getRoomFromCookie } from './lib/client'
-import { P2P, Connection, Data } from './lib/p2p'
-import { Button } from './components/button'
-import { InputBox } from './components/inputbox'
-import { toast } from 'react-hot-toast'
-import config from './lib/config'
-import { UserHead } from './components/user-head'
-import fileDownload from 'js-file-download'
-import { Fresh } from './components/fresh'
-import { Room } from './components/room'
 
 type ConnItemValue = {
   id: string
@@ -303,7 +304,7 @@ export default function Home() {
             <div className="h-full items-center justify-center">
               <Card className="mb-4">
                 <div className={`text-1xl mb-3`}>
-                  Room:{' '}
+                  Room:
                   <a
                     className="text-blue-500 hover:pointer"
                     href="#"

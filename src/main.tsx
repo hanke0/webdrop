@@ -1,7 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { ToastBar, Toaster, toast } from 'react-hot-toast'
+
 import App from './App.tsx'
-import { Toaster, ToastBar, toast } from 'react-hot-toast'
 import './main.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -1,4 +1,4 @@
-import { useRef, useState, ChangeEvent, KeyboardEvent, useEffect } from 'react'
+import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 
 export type CodeBoxProps = {
   length: number
@@ -76,12 +76,12 @@ export function CodeBox(props: CodeBoxProps) {
         break
       case 'ArrowLeft':
       case 'ArrowUp':
-      case 'Tab':
         e.preventDefault()
         focusOn(i - 1)
         break
       case 'ArrowRight':
       case 'ArrowDown':
+      case 'Tab':
         e.preventDefault()
         focusOn(i + 1)
         break
