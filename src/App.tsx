@@ -179,6 +179,7 @@ export default function Home() {
       console.log("send file:", file.name);
       conn.send(data)?.then(() => {
         console.log("send file done:", file.name);
+        toast.success(`send file to ${item.value.fullName} success`)
         setSendStatus(false);
         setFile(null);
       }).catch((err: Error) => {
@@ -189,10 +190,10 @@ export default function Home() {
       })
     }
 
-    if (!item.value.conn) {
+    if (!item.value.conn || !item.value.conn.ok) {
       const conn = sPeer.connect(item.value.fullName);
+      onConnectionOpen(conn.id, conn);
       conn.onOpen(() => {
-        onConnectionOpen(conn.id, conn);
         item.value.conn = conn;
         sendFile(file, conn)
       })

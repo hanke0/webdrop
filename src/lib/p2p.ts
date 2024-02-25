@@ -101,6 +101,10 @@ export class Connection {
     conn: DataConnection;
     id: string
 
+    get ok() {
+        return this.conn.open;
+    }
+
     constructor(id: string, conn: DataConnection) {
         this.conn = conn;
         this.id = id
