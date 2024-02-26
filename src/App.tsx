@@ -11,15 +11,10 @@ import { Item, Items, List } from './components/list'
 import { Room } from './components/room'
 import { Upload } from './components/upload'
 import { UserHead } from './components/user-head'
-import { getRoomAndUid, getRoomFromCookie } from './lib/client'
 import config from './lib/config'
 import { Connection, Data, P2P } from './lib/p2p'
-import {
-  generateName,
-  isGoodRoom,
-  parseRoomAndName,
-  parseName as parseUsername,
-} from './lib/room'
+import { parseRoomAndName } from './lib/room'
+import { useInitRoom } from './hooks/useInitRoom'
 
 type ConnItemValue = {
   id: string
@@ -41,9 +36,9 @@ export default function Home() {
   )
   const [sFile, setFile] = useState<File | null>(null)
   const [sSendStatus, setSendStatus] = useState(false)
-  const [sUser, setUser] = useState(generateName())
-  const [sRoom, setRoom] = useState('')
   const [sPeer, setPeer] = useState<P2P | null>(null)
+
+  const room = useInitRoom()
 
   const generateListItem = (item: Item<ConnItemValue>) => {
     const fullName = item.value.fullName
@@ -61,32 +56,13 @@ export default function Home() {
   }
 
   useEffect(() => {
-    let [roomID, uid] = getRoomAndUid()
-    if (!uid) {
-      uid = sUser.fullName
-    } else {
-      const name = parseUsername(uid)
-      if (name) {
-        setUser(name)
-      }
-    }
-    if (!roomID || !isGoodRoom(roomID)) {
-      roomID = getRoomFromCookie()
-      if (!roomID || !isGoodRoom(roomID)) {
-        roomID = 'DEFAULT'
-      }
-    }
-    setRoom(roomID)
-  }, [])
-
-  useEffect(() => {
-    if (!sRoom || !sUser) {
+    if (room.isLoading) {
       return
     }
-    console.log(`room: ${sRoom}, user:${sUser.fullName}`)
+    console.log(`room: ${room.room}, user:${room.user.fullName}`)
     const peer = new P2P({
-      room: sRoom,
-      username: sUser,
+      room: room.room,
+      username: room.user,
       hostname: config.PEER_HOSTNAME,
       port: config.PEER_PORT,
       path: config.PEER_PATH,
@@ -102,7 +78,7 @@ export default function Home() {
     })
     peer.onConnection(onConnectionOpen)
     setPeer(peer)
-  }, [sRoom, sUser])
+  }, [room])
 
   const onConnectionOpen = (id: string, conn: Connection) => {
     console.log('connection open:', id)
@@ -242,14 +218,14 @@ export default function Home() {
       console.log('peer is null. fresh room users')
       return
     }
-    if (!sRoom) {
+    if (room.isLoading) {
       console.log('room is null. fresh room users')
       return
     }
     const me = sPeer.id
     setIsRefresh(true)
     console.log('fresh room users')
-    fetch(`/api/room/${sRoom}/users`)
+    fetch(`/api/room/${room.room}/users`)
       .then((res) => {
         if (res.ok) {
           return res.json()
@@ -296,7 +272,7 @@ export default function Home() {
       <main
         className={`fond-sans min-h-screen m-auto items-center justify-between px-4 py-4 lg:py-16 lg:px-32 max-w-[900px]`}
       >
-        {sRoom && sUser && sPeer ? (
+        {!room.isLoading && sPeer ? (
           <Card>
             <h1 className={`text-4xl font-bold text-center px-2 py-8`}>
               Web Drop
@@ -313,13 +289,12 @@ export default function Home() {
                       setShowRoom(true)
                     }}
                   >
-                    {sRoom}
+                    {room.room}
                   </a>
                   {sShowRoom && (
                     <Room
-                      currentRoom={sRoom}
-                      currentUser={sUser}
-                      setCurrentRoom={setRoom}
+                      currentRoom={room.room}
+                      currentUser={room.user}
                       onClose={() => setShowRoom(false)}
                     />
                   )}
@@ -329,7 +304,7 @@ export default function Home() {
                   <span
                     onClick={() => {
                       navigator?.clipboard
-                        ?.writeText(sUser.fullName)
+                        ?.writeText(room.user.fullName)
                         .then(() => {
                           toast.success('copy username to clipboard')
                         })
@@ -341,11 +316,11 @@ export default function Home() {
                   >
                     <UserHead
                       className="inline mb-1"
-                      fullName={sUser.fullName}
+                      fullName={room.user.fullName}
                       width={20}
                       height={20}
                     />
-                    <span className="select-all">{sUser.fullName}</span>
+                    <span className="select-all">{room.user.fullName}</span>
                   </span>
                 </div>
                 <div className="w-1/2 my-2">

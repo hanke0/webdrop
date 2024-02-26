@@ -20,7 +20,7 @@ export const generateName = (): Username => {
   }
 }
 
-export const parseName = (fullName: string): Username | null => {
+export const parseUsername = (fullName: string): Username | null => {
   const [prefix, name] = fullName.split('-')
   if (prefixes.includes(prefix) && icons.includes(name)) {
     return {
@@ -34,7 +34,7 @@ export const parseName = (fullName: string): Username | null => {
 
 export const parseRoomAndName = (uid: string): [string, Username] | [] => {
   const index = uid.indexOf('-')
-  const name = parseName(uid.substring(index + 1))
+  const name = parseUsername(uid.substring(index + 1))
   if (!name) {
     return []
   }

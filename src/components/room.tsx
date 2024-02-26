@@ -10,7 +10,6 @@ import { Username, isGoodRoom } from '../lib/room'
 export type RoomProps = {
   currentRoom: string
   currentUser: Username
-  setCurrentRoom: (room: string) => void
   onClose?: () => void
 }
 

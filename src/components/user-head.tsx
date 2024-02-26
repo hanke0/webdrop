@@ -1,4 +1,4 @@
-import { parseName } from '../lib/room'
+import { parseUsername } from '../lib/room'
 
 export type UserHeadProps = {
   fullName: string
@@ -8,7 +8,7 @@ export type UserHeadProps = {
 }
 
 export const UserHead = (props: UserHeadProps) => {
-  const name = parseName(props.fullName)
+  const name = parseUsername(props.fullName)
   if (!name) {
     return <></>
   }

@@ -1,6 +1,6 @@
 import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
 
-import { Username, parseName } from './room'
+import { Username, parseUsername } from './room'
 
 export type Data = {
   type: 'file' | 'text'
@@ -88,7 +88,7 @@ export class P2P {
   }
 
   connect(fullName: string) {
-    const name = parseName(fullName)
+    const name = parseUsername(fullName)
     let id: string
     if (name) {
       id = this.room + '-' + fullName
