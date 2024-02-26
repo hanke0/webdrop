@@ -1,9 +1,9 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_PEER_HOSTNAME: string
-  readonly VITE_PEER_PORT: string
-  readonly VITE_PEER_PATH: string
+  readonly WEB_DROP_PEER_HOSTNAME: string
+  readonly WEB_DROP_PEER_PORT: string
+  readonly WEB_DROP_PEER_PATH: string
 }
 
 interface ImportMeta {

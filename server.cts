@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import express from 'express'
 import { IncomingMessage, createServer } from 'http'
 import { ExpressPeerServer, IClient } from 'peer'
@@ -139,9 +140,21 @@ peerServer.on('error', (error) => {
   console.log('peerServer error: ', error)
 })
 
-app.use('/', peerServer)
-app.use('/', express.static('dist'))
-app.use('/api/room/:room/users', (req, res) => {
+const baseURL = (() => {
+  const url = process.env.WEB_DROP_BASE_URL || '/'
+  if (url.endsWith('/')) {
+    return url.slice(0, -1)
+  }
+  return url
+})()
+
+const u = (url: string) => {
+  return baseURL + url
+}
+
+app.use(u('/'), peerServer)
+app.use(u('/'), express.static('dist'))
+app.use(u('/api/room/:room/users'), (req, res) => {
   const rid = req.params.room
   if (!rid) {
     res.status(400).send('Invalid room')
