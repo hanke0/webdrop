@@ -14,7 +14,11 @@ module.exports = {
     '.github',
   ],
   parser: '@typescript-eslint/parser',
-  plugins: ['react-refresh'],
+  plugins: [
+    'react-refresh',
+    'react-hooks',
+    'import',
+  ],
   rules: {
     'react-refresh/only-export-components': [
       'warn',
