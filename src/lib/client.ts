@@ -1,4 +1,5 @@
 import Cookies from 'js-cookie'
+import config from './config'
 
 export function getLocationParams(names: string[]): string[] {
   try {
@@ -10,7 +11,7 @@ export function getLocationParams(names: string[]): string[] {
   }
 }
 
-export function getRoomAndUid(): [string, string] {
+export function getRoomAndUser(): [string, string] {
   const [uid, room] = getLocationParams(['uid', 'room'])
   return [room, uid]
 }
@@ -19,7 +20,7 @@ export function getCookieParam(names: string[]): string[] {
   return names.map((name) => Cookies.get(name) || '')
 }
 
-export function getRoomFromCookie(): string {
+export function getLocalRoom(): string {
   return Cookies.get('useriproom') || ''
 }
 
@@ -27,4 +28,8 @@ export function getRoomURL(room: string): string {
   const url = new URL(window.location.href)
   url.searchParams.set('room', room)
   return url.toString()
+}
+
+export function getRoomUserListURL(room: string) {
+  return `${config.BASE_URL}/api/room/${room}/users`
 }

@@ -1,4 +1,5 @@
-import uniqueID from 'lodash/uniqueId'
+import { useId, useRef } from 'react'
+import useDragging from '../hooks/useDragging'
 
 type UploadProps = {
   callback: (file: File) => void
@@ -7,14 +8,19 @@ type UploadProps = {
 }
 
 export function Upload(props: UploadProps) {
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (file) {
-      props.callback(file)
+  const id = useId()
+  const labelRef = useRef<HTMLLabelElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files && files.length > 0) {
+      props.callback(files[0])
     }
   }
-  const id = uniqueID('upload-')
-  const name = props.name || 'upload-file'
+
+  const dragging = useDragging({ labelRef, onChange: props.callback })
+
   return (
     <div
       className={`flex items-center justify-center w-full ${props.className}`}
@@ -22,6 +28,7 @@ export function Upload(props: UploadProps) {
       <label
         htmlFor={id}
         className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
+        ref={labelRef}
       >
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <svg
@@ -40,19 +47,22 @@ export function Upload(props: UploadProps) {
             />
           </svg>
           <p className="mb-2 text-sm text-gray-500">
-            <span className="font-semibold">Click to upload</span> or drag and
-            drop
+            {dragging ? (
+              <span className="font-semibold">Drop file here</span>
+            ) : (
+              <>
+                <span className="font-semibold">Click to upload</span> or drag
+                and drop
+              </>
+            )}
           </p>
         </div>
         <input
+          ref={inputRef}
           onChange={onFileChange}
           id={id}
-          name={name}
           type="file"
           className="hidden"
-          onClick={(e) => {
-            e.currentTarget.value = ''
-          }}
         />
       </label>
     </div>

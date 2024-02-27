@@ -1,15 +1,15 @@
-import { parseUsername } from '../lib/room'
+import { getUserIconPath } from '../lib/room'
 
 export type UserHeadProps = {
-  fullName: string
+  user: string
   className?: string
   width?: number
   height?: number
 }
 
 export const UserHead = (props: UserHeadProps) => {
-  const name = parseUsername(props.fullName)
-  if (!name) {
+  const path = getUserIconPath(props.user)
+  if (!path) {
     return <></>
   }
   return (
@@ -17,8 +17,8 @@ export const UserHead = (props: UserHeadProps) => {
       className={props.className}
       width={props.width}
       height={props.height}
-      alt={props.fullName}
-      src={`/icons/${name.name}.svg`}
+      alt={props.user}
+      src={path}
     />
   )
 }

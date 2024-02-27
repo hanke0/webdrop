@@ -5,15 +5,14 @@ import QRCode from 'react-qr-code'
 import { CodeBox } from './codebox'
 import { Dialog } from './dialog'
 import { getRoomURL } from '../lib/client'
-import { Username, isGoodRoom } from '../lib/room'
+import { isGoodRoom } from '../lib/room'
 
-export type RoomProps = {
-  currentRoom: string
-  currentUser: Username
+export type RoomDialogProps = {
+  room: string
   onClose?: () => void
 }
 
-export const Room = (props: RoomProps) => {
+export const RoomDialog = (props: RoomDialogProps) => {
   const onFull = (code: string) => {
     if (!isGoodRoom(code)) {
       toast.error('Invalid room code')
@@ -21,7 +20,7 @@ export const Room = (props: RoomProps) => {
     }
     window.location.replace(getRoomURL(code))
   }
-  const url = useRef(getRoomURL(props.currentRoom).toString())
+  const url = useRef(getRoomURL(props.room).toString())
 
   return (
     <Dialog closeable={true} onClose={props.onClose}>
@@ -30,7 +29,7 @@ export const Room = (props: RoomProps) => {
         length={6}
         onFull={onFull}
         beforeChange={(code) => code.toUpperCase()}
-        defaultCode={props.currentRoom}
+        defaultCode={props.room}
         validator={(input) => {
           return /^[A-Z0-9]$/.test(input)
         }}

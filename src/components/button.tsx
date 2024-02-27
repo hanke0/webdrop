@@ -1,11 +1,34 @@
+import { LoadingIcon } from './loading-icon'
+
 export type ButtonProps = {
   children: React.ReactNode
   onClick?: () => void
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
+  cancelContent?: { txt: string; state: boolean }
+}
+
+function cancelContent(txt: string) {
+  return (
+    <>
+      <LoadingIcon className="w-4 h-4 me-3"></LoadingIcon>
+      <span>{txt}</span>
+    </>
+  )
 }
 
 export function Button(props: ButtonProps) {
+  let content = props.children
+  if (props.cancelContent) {
+    content = (
+      <>
+        {props.cancelContent.state
+          ? cancelContent(props.cancelContent.txt)
+          : props.children}
+      </>
+    )
+  }
+
   return (
     <button
       onClick={props.onClick}
@@ -13,7 +36,7 @@ export function Button(props: ButtonProps) {
       type={props.type}
       disabled={props.disabled}
     >
-      {props.children}
+      {content}
     </button>
   )
 }

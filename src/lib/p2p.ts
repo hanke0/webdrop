@@ -1,6 +1,6 @@
 import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
-
-import { Username, parseUsername } from './room'
+import { splitRoomAndUser, isGoodUser } from './room'
+import config from '../lib/config'
 
 export type Data = {
   type: 'file' | 'text'
@@ -10,11 +10,8 @@ export type Data = {
 
 export type Options = {
   room: string
-  username: Username
+  user: string
   logLevel?: LogLevel
-  path?: string
-  hostname?: string
-  port?: number
 }
 
 const tunConfig = {
@@ -42,37 +39,54 @@ export interface P2PError {
 
 export class P2P {
   peer: Peer
-  user: Username
+  user: string
   room: string
   id: string
 
   constructor(options: Options) {
+    console.log(config)
     this.room = options.room
-    this.user = options.username
+    this.user = options.user
     const opt: PeerOptions = {
       debug: options.logLevel || 2, // default warning
       config: tunConfig,
     }
-    options.hostname && (opt.host = options.hostname)
-    options.port && (opt.port = options.port)
-    if (!options.port) {
+    config.PEER_HOSTNAME && (opt.host = config.PEER_HOSTNAME)
+    config.PEER_PORT && (opt.port = config.PEER_PORT)
+    if (opt.host && !config.PEER_PORT) {
       if (window.location.port) {
         opt.port = parseInt(window.location.port)
       } else {
         opt.port = window.location.protocol === 'https:' ? 443 : 80
       }
     }
-    options.path && (opt.path = options.path)
-    const id = `${options.room}-${options.username.fullName}`
-    console.log(
-      `peer options: id=${id}, host=${opt.host}, port=${opt.port}, path=${opt.path} key=${opt.key}`
-    )
-    this.peer = new Peer(id, opt)
+    config.PEER_PATH && (opt.path = config.PEER_PATH)
+
+    const id = `${options.room}-${options.user}`
+    if (!opt.host) {
+      this.peer = new Peer(opt)
+    } else {
+      console.log(
+        `peer options: id=${id}, host=${opt.host}, port=${opt.port}, path=${opt.path}`
+      )
+      this.peer = new Peer(id, opt)
+    }
     this.id = id
   }
 
   onOpen(callback: (id: string) => void) {
-    this.peer.on('open', callback)
+    this.peer.on('open', (id) => {
+      this.id = id
+      const [room, user] = splitRoomAndUser(id)
+      if (room && user) {
+        this.room = room
+        this.user = user
+      } else {
+        this.room = ''
+        this.user = id
+      }
+      callback(id)
+    })
   }
 
   onConnection(callback: (id: string, conn: Connection) => void) {
@@ -88,9 +102,8 @@ export class P2P {
   }
 
   connect(fullName: string) {
-    const name = parseUsername(fullName)
     let id: string
-    if (name) {
+    if (isGoodUser(fullName)) {
       id = this.room + '-' + fullName
     } else {
       id = fullName
@@ -103,9 +116,10 @@ export class P2P {
 export class Connection {
   conn: DataConnection
   id: string
+  err?: Error
 
   get ok() {
-    return this.conn.open
+    return !this.err && this.conn.open
   }
 
   constructor(id: string, conn: DataConnection) {
@@ -128,7 +142,10 @@ export class Connection {
   }
 
   onError(callback: (err: Error) => void) {
-    this.conn.on('error', callback)
+    this.conn.on('error', (err) => {
+      this.err = err
+      callback(err)
+    })
   }
 
   send(data: Data) {

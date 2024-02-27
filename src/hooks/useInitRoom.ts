@@ -1,91 +1,90 @@
-import { getRoomAndUid, getRoomFromCookie } from '../lib/client'
-import { useReducer, useEffect } from 'react'
+import { getRoomAndUser, getLocalRoom } from '../lib/client'
+import { useEffect, useRef, useState } from 'react'
+import { P2P } from '../lib/p2p'
+import { toast } from 'react-hot-toast'
+
 import {
-  generateName,
-  randomRoomID,
+  randomUser,
+  randomRoom,
   isGoodRoom,
-  parseUsername,
-  Username,
+  isGoodUser,
+  splitRoomAndUser,
 } from '../lib/room'
 
 export type RoomState = {
   isLoading: boolean
   room: string
-  user: Username
-}
-
-enum RoomActionType {
-  'SET_ROOM',
-  'SET_USER',
-  'SET_LOADING',
-}
-
-type RoomAction =
-  | {
-      type: RoomActionType.SET_ROOM
-      payload: string
-    }
-  | {
-      type: RoomActionType.SET_USER
-      payload: Username
-    }
-  | {
-      type: RoomActionType.SET_LOADING
-      payload: boolean
-    }
-
-const useRoomReducer = (state: RoomState, action: RoomAction) => {
-  switch (action.type) {
-    case RoomActionType.SET_ROOM:
-      return { ...state, room: action.payload }
-    case RoomActionType.SET_USER:
-      return { ...state, user: action.payload }
-    case RoomActionType.SET_LOADING:
-      return { ...state, isLoading: action.payload }
-    default:
-      return state
-  }
+  user: string
+  me: string // full id, include room and user
+  peer?: P2P
+  err?: Error
 }
 
 export function useInitRoom() {
   const initialState: RoomState = {
     isLoading: true,
     room: '',
-    user: { prefix: '', name: '', fullName: ''},
+    user: '',
+    me: '',
   }
-  const [state, dispatch] = useReducer(useRoomReducer, initialState)
+  const refState = useRef(initialState)
+  const [state, setState] = useState(initialState)
 
   useEffect(() => {
-    const [rid, uid] = getRoomAndUid()
+    const [rid, uid] = getRoomAndUser()
+    const newState = { ...refState.current }
 
     const setRoom = (rid: string) => {
       if (rid && isGoodRoom(rid)) {
-        dispatch({ type: RoomActionType.SET_ROOM, payload: rid })
+        newState.room = rid
         return
       }
-      const crid = getRoomFromCookie()
+      const crid = getLocalRoom()
       if (crid && isGoodRoom(crid)) {
-        dispatch({ type: RoomActionType.SET_ROOM, payload: crid })
+        newState.room = crid
         return
       }
-      dispatch({ type: RoomActionType.SET_ROOM, payload: randomRoomID() })
+      newState.room = randomRoom()
     }
     setRoom(rid)
 
     const setUser = (uid: string) => {
-      if (uid) {
-        const user = parseUsername(uid)
-        if (user) {
-          dispatch({ type: RoomActionType.SET_USER, payload: user })
-          return
-        }
+      if (uid && isGoodUser(uid)) {
+        newState.user = uid
+        return
       }
-      const user = generateName()
-      dispatch({ type: RoomActionType.SET_USER, payload: user })
+      newState.user = randomUser()
     }
     setUser(uid)
-    dispatch({ type: RoomActionType.SET_LOADING, payload: false })
-  }, [])
 
+    newState.me = newState.room + '-' + newState.user
+
+    const peer = new P2P({
+      room: newState.room,
+      user: newState.user,
+    })
+    peer.onOpen((id) => {
+      console.log('peer is open', id)
+      const [room, user] = splitRoomAndUser(id)
+      if (room && user) {
+        newState.room = room
+        newState.user = user
+      } else {
+        newState.room = ''
+        newState.user = id
+      }
+      newState.me = id
+      newState.peer = peer
+      newState.isLoading = false
+      setState(newState)
+    })
+    peer.onError((err) => {
+      console.log('peer error ---- ', err)
+      toast.error(`peer error: ${err.message}`)
+      newState.err = err
+      newState.isLoading = false
+      setState(newState)
+    })
+  }, [refState])
   return state
 }

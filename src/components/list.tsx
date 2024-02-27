@@ -2,7 +2,7 @@ import React from 'react'
 
 export type Item<T> = {
   id: number
-  value: T
+  payload: T
   selected: boolean
 }
 
