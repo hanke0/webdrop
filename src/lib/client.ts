@@ -31,5 +31,5 @@ export function getRoomURL(room: string): string {
 }
 
 export function getRoomUserListURL(room: string) {
-  return `${config.BASE_URL}/api/room/${room}/users`
+  return `${config.BASE_URL}api/room/${room}/users`
 }

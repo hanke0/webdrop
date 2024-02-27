@@ -1,11 +1,15 @@
+import { useState } from 'react'
+
 export type FreshProps = {
   width: number
   height: number
   className?: string
-  onClick?: () => void
+  onClick: () => Promise<void>
 }
 
 export function Fresh(props: FreshProps) {
+  const [clicking, setClicking] = useState(false)
+
   return (
     <svg
       height={props.height}
@@ -13,8 +17,21 @@ export function Fresh(props: FreshProps) {
       version="1.1"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 489.698 489.698"
-      className={props.className}
-      onClick={props.onClick}
+      className={`${props.className} ${clicking && 'animate-spin'}`}
+      onClick={async () => {
+        if (clicking) {
+          return
+        }
+        setClicking(true)
+        try {
+          await props.onClick()
+        } catch (e) {
+          console.log(e)
+        }
+        setTimeout(() => {
+          setClicking(false)
+        }, 1000)
+      }}
     >
       <g>
         <g>

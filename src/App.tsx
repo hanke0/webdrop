@@ -78,7 +78,6 @@ export default function Home() {
   const [sSelectedItem, setSelectedItem] = useState<Item<ConnItemValue> | null>(
     null
   )
-  const [sIsRefresh, setIsRefresh] = useState(false)
   const room = useInitRoom()
 
   if (room.isLoading) {
@@ -194,51 +193,43 @@ export default function Home() {
     }
   }
 
-  const handleRefreshRoomUsers = () => {
-    if (sIsRefresh) {
-      return
+  const handleRefreshRoomUsers = async () => {
+    try {
+      const res = await fetch(getRoomUserListURL(room.room))
+      if (!res.ok) {
+        toast.error('fetch room users fail: ' + res.statusText)
+        return
+      }
+      const data = await res.json()
+      console.log('fetch room users:', data)
+      const items = [...sItems]
+      let added = false
+      data.map((ele: { id: string }) => {
+        const id = ele.id
+        if (!id || id == room.me) {
+          return
+        }
+        if (!items.find((item) => item.payload.id === id)) {
+          added = true
+          const [, user] = splitRoomAndUser(id)
+          const item: Item<ConnItemValue> = {
+            id: items.length + 1,
+            payload: { id: id, user: id },
+            selected: false,
+          }
+          if (user) {
+            item.payload.user = user
+          }
+          items.push(item)
+        }
+      })
+      if (added) {
+        setItems(items)
+      }
+    } catch (err) {
+      console.log('fetch room users fail:', err)
+      toast.error(`fetch room users fail: ${err}`)
     }
-    setIsRefresh(true)
-    fetch(getRoomUserListURL(room.room))
-      .then((res) => {
-        if (res.ok) {
-          return res.json()
-        }
-        throw new Error('fetch room users fail: ' + res.statusText)
-      })
-      .then((data) => {
-        console.log('fetch room users:', data)
-        const items = [...sItems]
-        let added = false
-        data.map((ele: { id: string }) => {
-          const id = ele.id
-          if (!id || id == room.me) {
-            return
-          }
-          if (!items.find((item) => item.payload.id === id)) {
-            added = true
-            const [, user] = splitRoomAndUser(id)
-            const item: Item<ConnItemValue> = {
-              id: items.length + 1,
-              payload: { id: id, user: id },
-              selected: false,
-            }
-            if (user) {
-              item.payload.user = user
-            }
-            items.push(item)
-          }
-        })
-        if (added) {
-          setItems(items)
-        }
-        setIsRefresh(false)
-      })
-      .catch((err) => {
-        console.log('fetch room users fail:', err)
-        toast.error(`fetch room users fail: ${err}`)
-        setIsRefresh(false)
-      })
   }
 
   return (
