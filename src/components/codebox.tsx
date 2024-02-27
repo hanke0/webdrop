@@ -96,6 +96,7 @@ export function CodeBox(props: CodeBoxProps) {
         }
         break
       default:
+        e.currentTarget.select()
         break
     }
   }
@@ -126,6 +127,7 @@ export function CodeBox(props: CodeBoxProps) {
   for (let i = 0; i < props.length; i++) {
     codeBox.push(
       <input
+        autoFocus={i == 0}
         className="inline-block w-10 h-10 m-1 border-2 border-gray-300 rounded-md text-center focus:outline-none focus:border-blue-500"
         type={inputType}
         maxLength={1}
