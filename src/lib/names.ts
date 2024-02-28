@@ -69,7 +69,7 @@ export const prefixes = [
   'adventurous',
   'affable',
   'ambitious',
-  'amiable ',
+  'amiable',
   'amusing',
   'brave',
   'bright',

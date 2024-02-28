@@ -5,6 +5,7 @@ type UploadProps = {
   callback: (file: File) => void
   name?: string
   className?: string
+  children?: React.ReactNode
 }
 
 export function Upload(props: UploadProps) {
@@ -18,6 +19,12 @@ export function Upload(props: UploadProps) {
       props.callback(files[0])
     }
   }
+
+  const content = props.children || (
+    <>
+      <span className="font-semibold">Click to upload</span> or drag and drop
+    </>
+  )
 
   const dragging = useDragging({ labelRef, onChange: props.callback })
 
@@ -50,10 +57,7 @@ export function Upload(props: UploadProps) {
             {dragging ? (
               <span className="font-semibold">Drop file here</span>
             ) : (
-              <>
-                <span className="font-semibold">Click to upload</span> or drag
-                and drop
-              </>
+              content
             )}
           </p>
         </div>

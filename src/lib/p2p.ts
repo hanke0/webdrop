@@ -1,6 +1,8 @@
 import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
 import { splitRoomAndUser, isGoodUser } from './room'
 import config from '../lib/config'
+import toast from 'react-hot-toast'
+import fileDownload from 'js-file-download'
 
 export type Data = {
   type: 'file' | 'text'
@@ -42,6 +44,7 @@ export class P2P {
   user: string
   room: string
   id: string
+  err?: Error
 
   constructor(options: Options) {
     console.log(config)
@@ -63,15 +66,21 @@ export class P2P {
     config.PEER_PATH && (opt.path = config.PEER_PATH)
 
     const id = `${options.room}-${options.user}`
+    console.log(
+      `peer is opening: id=${id}, host=${opt.host}, port=${opt.port}, path=${opt.path}`
+    )
     if (!opt.host) {
       this.peer = new Peer(opt)
     } else {
-      console.log(
-        `peer options: id=${id}, host=${opt.host}, port=${opt.port}, path=${opt.path}`
-      )
       this.peer = new Peer(id, opt)
     }
     this.id = id
+  }
+
+  close() {
+    console.log('peer is closing: ', this.id)
+    this.peer.disconnect()
+    this.peer.destroy()
   }
 
   onOpen(callback: (id: string) => void) {
@@ -89,66 +98,152 @@ export class P2P {
     })
   }
 
-  onConnection(callback: (id: string, conn: Connection) => void) {
+  onDisconnect(callback: () => void) {
+    this.peer.on('disconnected', () => {
+      console.log('peer is disconnected:', this.id)
+      callback()
+    })
+  }
+
+  onClose(callback: () => void) {
+    this.peer.on('close', () => {
+      console.log('peer is closed:', this.id)
+      callback()
+    })
+  }
+
+  onConnection(callback: ConnectionCallback) {
     this.peer.on('connection', (conn) => {
-      callback(conn.label, new Connection(conn.label, conn))
+      const c = new Connection(conn.peer, conn, callback)
+      if (callback.knock) {
+        callback.knock(c)
+      }
     })
   }
 
   onError(callback: (err: Error) => void) {
     this.peer.on('error', (e) => {
+      console.log('peer error:', this.id, e)
       callback(e)
+      this.err = e
     })
   }
 
-  connect(fullName: string) {
+  connect(fullName: string, callback: ConnectionCallback) {
     let id: string
     if (isGoodUser(fullName)) {
       id = this.room + '-' + fullName
     } else {
       id = fullName
     }
+    console.log('make new connection:', this.id, id)
     const conn = this.peer.connect(id, { reliable: true, label: this.id })
-    return new Connection(id, conn)
+    return new Connection(id, conn, callback)
   }
 }
 
-export class Connection {
+type ConnectionCallback = {
+  // called when a new connection is passive established
+  knock?: (conn: Connection) => void
+  open: (conn: Connection) => void
+  close: (conn: Connection) => void
+  error: (conn: Connection, err: Error) => void
+}
+
+export interface LazyConnection {
+  getReal: (peer: P2P) => Connection
+  id: string
+}
+
+export class LazyConnectionImpl implements LazyConnection {
+  id: string
+  buildConn: (peer: P2P) => Connection
+  conn?: Connection
+
+  constructor(id: string, buildConn: (peer: P2P) => Connection) {
+    this.id = id
+    this.buildConn = buildConn
+  }
+
+  getReal(peer: P2P) {
+    if (this.conn) {
+      return this.conn
+    }
+    this.conn = this.buildConn(peer)
+    return this.conn
+  }
+}
+
+export class Connection implements LazyConnection {
   conn: DataConnection
   id: string
   err?: Error
+  closed?: boolean
+  opened?: boolean
 
   get ok() {
-    return !this.err && this.conn.open
+    return !this.err && !this.closed
   }
 
-  constructor(id: string, conn: DataConnection) {
+  getReal() {
+    return this
+  }
+
+  get user() {
+    const [, user] = splitRoomAndUser(this.id)
+    if (user) {
+      return user
+    }
+    return this.id
+  }
+
+  constructor(id: string, conn: DataConnection, callback: ConnectionCallback) {
     this.conn = conn
     this.id = id
-  }
-
-  onOpen(callback: () => void) {
-    this.conn.on('open', callback)
-  }
-
-  onClose(callback: () => void) {
-    this.conn.on('close', callback)
-  }
-
-  onReceive(callback: (data: Data) => void) {
-    this.conn.on('data', (data) => {
-      callback(data as Data)
+    conn.on('open', () => {
+      console.log('connection open:', id)
+      this.opened = true
+      callback.open(this)
     })
-  }
-
-  onError(callback: (err: Error) => void) {
-    this.conn.on('error', (err) => {
+    conn.on('close', () => {
+      console.log('connection close:', id)
+      this.closed = true
+      this.opened = false
+      callback.close(this)
+    })
+    conn.on('error', (err) => {
+      console.log('connection error:', id, err)
       this.err = err
-      callback(err)
+      this.closed = true
+      this.opened = false
+      callback.error(this, err)
+    })
+    conn.on('data', (payload) => {
+      console.log('receive data from :', this.id)
+      const data = payload as Data
+      console.log('peer receive data:', this.id, data.type, data.name)
+      if (data.type !== 'file') {
+        toast(`receive message from ${data.name}: ${data.payload}`)
+        return
+      }
+      toast(`receive file ${data.name}`)
+      fileDownload(data.payload, data.name)
     })
   }
 
   send(data: Data) {
+    if (!this.conn.open) {
+      toast.error(`connection to ${this.id} is not open`)
+      console.log('send data to not opened connection:', this.id)
+      return
+    }
+    console.log('send data to:', this.id)
     return this.conn.send(data)
+  }
+
+  close() {
+    this.conn.close()
+    this.closed = true
+    this.opened = false
   }
 }

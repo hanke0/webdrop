@@ -2,7 +2,7 @@ import { LoadingIcon } from './loading-icon'
 
 export type ButtonProps = {
   children: React.ReactNode
-  onClick?: () => void
+  handleClick?: (ev: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
   cancelContent?: { txt: string; state: boolean }
@@ -31,9 +31,15 @@ export function Button(props: ButtonProps) {
 
   return (
     <button
-      onClick={props.onClick}
+      onClick={(ev) => {
+        if (props.handleClick) {
+          ev.preventDefault()
+          ev.stopPropagation()
+          props.handleClick(ev)
+        }
+      }}
       className={`py-2.5 px-5 mt-2 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 inline-flex items-center`}
-      type={props.type}
+      type={props.type || 'button'}
       disabled={props.disabled}
     >
       {content}

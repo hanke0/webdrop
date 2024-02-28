@@ -1,35 +1,26 @@
-import { useState } from 'react'
-import { RoomState } from '../hooks/useInitRoom'
+import { useRef } from 'react'
 import { RoomDialog } from './room-dialog'
 import { isGoodRoom } from '../lib/room'
+import { P2P } from '../lib/p2p'
 
 export type RoomTextProps = {
-  room: RoomState
+  peer: P2P
 }
 
 export function RoomText(props: RoomTextProps) {
-  const [sShowRoom, setShowRoom] = useState(false)
+  const ref = useRef<HTMLAnchorElement>(null)
 
-  if (props.room.isLoading || !isGoodRoom(props.room.room)) {
+  if (!props.peer || !isGoodRoom(props.peer.room)) {
     return <div>You are in default Room</div>
   }
 
   return (
     <div className={`text-1xl mb-3`}>
       Room:
-      <a
-        className="text-blue-500 hover:pointer"
-        href="#"
-        onClick={(e) => {
-          e.preventDefault()
-          setShowRoom(true)
-        }}
-      >
-        {props.room.room}
+      <a className="text-blue-500 hover:pointer" href="#" ref={ref}>
+        {props.peer.room}
       </a>
-      {sShowRoom && (
-        <RoomDialog room={props.room.room} onClose={() => setShowRoom(false)} />
-      )}
+      <RoomDialog room={props.peer.room} open={ref} />
     </div>
   )
 }

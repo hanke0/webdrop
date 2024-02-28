@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Dialog } from './dialog'
+import { Dialog, OpenState } from './dialog'
 import { UserHead } from './user-head'
 import { Upload } from './upload'
 import { Button } from './button'
@@ -8,19 +8,43 @@ import toast from 'react-hot-toast'
 export type FileSendDialogProps = {
   handleSendFile: (file: File) => Promise<void>
   onClose: () => void
+  open: OpenState
   user: string
 }
 
 export function FileSendDialog(props: FileSendDialogProps) {
   const [file, setFile] = useState(null as File | null)
-  const [isSend, setIsSend] = useState(false)
+  const [sending, setSending] = useState(false)
+
+  const handleClick = async () => {
+    if (sending) {
+      setSending(false)
+      return true
+    }
+    if (file) {
+      setSending(true)
+      const send = async () => {
+        try {
+          await props.handleSendFile(file)
+          toast.success('Send file success')
+          setFile(null)
+        } catch (err) {
+          toast.error(`Send file fail: ${err}`)
+        }
+        setSending(false)
+      }
+      send()
+    } else {
+      toast.error('No file selected')
+    }
+  }
 
   return (
     <Dialog
-      closeable={true}
+      open={props.open}
       onClose={() => {
         setFile(null)
-        setIsSend(false)
+        setSending(false)
         props.onClose()
       }}
     >
@@ -36,29 +60,16 @@ export function FileSendDialog(props: FileSendDialogProps) {
           <span className="text-[20px]">{props.user}</span>
         </div>
       </h3>
-      <Upload callback={(file) => setFile(file)}></Upload>
-      {file && <div className="py-3 px-3">{file.name}</div>}
+      <Upload callback={(file) => setFile(file)}>
+        {file && (
+          <>
+            <span className="text-blue-400">{file.name}</span>
+          </>
+        )}
+      </Upload>
       <Button
-        onClick={async () => {
-          if (isSend) {
-            setIsSend(false)
-            return
-          }
-          if (file) {
-            setIsSend(true)
-            try {
-              await props.handleSendFile(file)
-              toast.success('Send file success')
-              setFile(null)
-            } catch (err) {
-              toast.error(`Send file fail: ${err}`)
-            }
-            setIsSend(false)
-          } else {
-            toast.error('No file selected')
-          }
-        }}
-        cancelContent={{ txt: 'Cancel', state: isSend }}
+        handleClick={handleClick}
+        cancelContent={{ txt: 'Cancel', state: sending }}
       >
         Send
       </Button>

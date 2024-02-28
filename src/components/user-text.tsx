@@ -1,9 +1,9 @@
-import { RoomState } from '../hooks/useInitRoom'
 import { UserHead } from './user-head'
 import toast from 'react-hot-toast'
 
 export type UserTextProps = {
-  room: RoomState
+  uid: string
+  user: string
 }
 
 export function UserText(props: UserTextProps) {
@@ -13,7 +13,7 @@ export function UserText(props: UserTextProps) {
       <span
         onClick={() => {
           navigator?.clipboard
-            ?.writeText(props.room.me)
+            ?.writeText(props.uid)
             .then(() => {
               toast.success('copy username to clipboard')
             })
@@ -25,11 +25,11 @@ export function UserText(props: UserTextProps) {
       >
         <UserHead
           className="inline mb-1"
-          user={props.room.user}
+          user={props.user}
           width={20}
           height={20}
         />
-        <span className="select-all">{props.room.user}</span>
+        <span className="select-all">{props.user}</span>
       </span>
     </div>
   )

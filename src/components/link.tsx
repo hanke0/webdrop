@@ -9,7 +9,8 @@ type Props = {
 }
 
 export function Link(props: Props) {
-  const defaultClass = 'text-blue-500 hover:text-blue-700 hover:pointer'
+  const defaultClass =
+    'cursor-pointer text-blue-500 hover:text-blue-700 hover:pointer'
   return (
     <a
       onClick={props.onClick}

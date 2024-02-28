@@ -55,7 +55,7 @@ const getUserIPRoom = (req: IncomingMessage) => {
 app.enable('trust proxy')
 app.use(morgan('short'))
 app.use(function (req, res, next) {
-  if (req.path === '/') {
+  if (req.path === u('/')) {
     const room = getUserIPRoom(req)
     res.cookie('userip', room.ip, { maxAge: 900000 })
     res.cookie('useriproom', room.name, { maxAge: 900000 })

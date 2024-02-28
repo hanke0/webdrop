@@ -1,4 +1,11 @@
-import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
+import {
+  ChangeEvent,
+  KeyboardEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
 
 export type CodeBoxProps = {
   length: number
@@ -13,6 +20,7 @@ export type CodeBoxProps = {
 export function CodeBox(props: CodeBoxProps) {
   const [code, setCode] = useState(new Array(props.length).fill(''))
   const doms = useRef(new Array(props.length).fill(null))
+  const id = useId()
 
   useEffect(() => {
     if (props.defaultCode) {
@@ -127,6 +135,7 @@ export function CodeBox(props: CodeBoxProps) {
   for (let i = 0; i < props.length; i++) {
     codeBox.push(
       <input
+        key={`${id}-${i}`}
         autoFocus={i == 0}
         className="inline-block w-10 h-10 m-1 border-2 border-gray-300 rounded-md text-center focus:outline-none focus:border-blue-500"
         type={inputType}

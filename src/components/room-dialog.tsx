@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, RefObject } from 'react'
 import { toast } from 'react-hot-toast'
 import QRCode from 'react-qr-code'
 
@@ -9,6 +9,7 @@ import { isGoodRoom } from '../lib/room'
 
 export type RoomDialogProps = {
   room: string
+  open: RefObject<HTMLElement>
   onClose?: () => void
 }
 
@@ -23,7 +24,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
   const url = useRef(getRoomURL(props.room).toString())
 
   return (
-    <Dialog closeable={true} onClose={props.onClose}>
+    <Dialog open={props.open} onClose={props.onClose}>
       <h2 className="my-2 text-2xl font-bold">Your Room</h2>
       <CodeBox
         length={6}
