@@ -1,6 +1,3 @@
-import { useState } from 'react'
-import { toast } from 'react-hot-toast'
-
 import { Card } from './components/card'
 import { Fresh } from './components/fresh'
 import { InputBox } from './components/inputbox'
@@ -24,6 +21,8 @@ import { ErrorPage } from './components/error-page'
 import useConnections from './hooks/useConnections'
 import { splitRoomAndUser } from './lib/room'
 import { sleep } from './lib/client'
+import { toast } from 'react-hot-toast'
+import { useState } from 'react'
 
 const generateListItem = (item: LazyConnection) => {
   const id = item.id

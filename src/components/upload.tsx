@@ -1,5 +1,5 @@
-import { useId, useRef } from 'react'
 import useDragging from '../hooks/useDragging'
+import { useId, useRef } from 'react'
 
 type UploadProps = {
   callback: (file: File) => void

@@ -1,9 +1,0 @@
-{
-  "ignore": ["**/*.test.ts", "**/*.test.tsx", "node_modules", ".git"],
-  "exec": "npm run build && npm run serve",
-  "watch": ["src", "server.cts", ".env", ".env.development", ".env.local"],
-  "ext": "tsx ts cjs cts js json css",
-  "env": {
-    "NODE_ENV": "development"
-  }
-}

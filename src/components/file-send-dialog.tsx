@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { Dialog, OpenState } from './dialog'
 import { UserHead } from './user-head'
 import { Upload } from './upload'
 import { Button } from './button'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 
 export type FileSendDialogProps = {

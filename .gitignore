@@ -24,5 +24,6 @@ dist-ssr
 *.sw?
 /server.js
 /server.cjs
+/server/server.js
 /release
 *.tar.*

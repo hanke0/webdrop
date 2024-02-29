@@ -1,6 +1,6 @@
-import { sample, sampleSize } from 'lodash'
 import { icons, prefixes } from './names'
 import config from './config'
+import { sample, sampleSize } from 'lodash'
 
 const roomRE = /^[A-Z0-9]{6}$/
 export function isGoodRoom(room: string): boolean {

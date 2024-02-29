@@ -7,11 +7,8 @@ module.exports = {
     'plugin:react-hooks/recommended',
   ],
   ignorePatterns: [
-    'dist',
-    '.eslintrc.cjs',
-    'node_modules',
-    'release',
-    '.github',
+    '/.git',
+    '/.github',
   ],
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh', 'react-hooks', 'import'],
@@ -20,5 +17,29 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    'import/order': [
+      'error',
+      {
+        groups: [
+          'index',
+          'sibling',
+          'parent',
+          'internal',
+          'external',
+          'builtin',
+          'object',
+          'type',
+        ],
+      },
+    ],
+    indent: ['error', 2, { SwitchCase: 1 }],
+    'max-len': ['error', {
+      code: 100,
+      ignoreUrls: true,
+      ignoreStrings: true,
+      ignoreTemplateLiterals: true,
+      ignoreRegExpLiterals: true,
+      ignorePattern: 'd="([\\s\\S]*?)"' // ignore svg data
+    }],
   },
 }

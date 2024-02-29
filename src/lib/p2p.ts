@@ -1,6 +1,6 @@
-import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
-import { splitRoomAndUser, isGoodUser } from './room'
+import { isGoodUser, splitRoomAndUser } from './room'
 import config from '../lib/config'
+import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
 import toast from 'react-hot-toast'
 import fileDownload from 'js-file-download'
 

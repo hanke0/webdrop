@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
 import { LazyConnection } from '../lib/p2p'
+import { useCallback, useState } from 'react'
 
 export default function useConnections() {
   const [connections, setConnections] = useState<LazyConnection[]>([])

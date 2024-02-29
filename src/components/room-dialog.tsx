@@ -1,11 +1,10 @@
-import { useRef, RefObject } from 'react'
-import { toast } from 'react-hot-toast'
-import QRCode from 'react-qr-code'
-
 import { CodeBox } from './codebox'
 import { Dialog } from './dialog'
 import { getRoomURL } from '../lib/client'
 import { isGoodRoom } from '../lib/room'
+import QRCode from 'react-qr-code'
+import { toast } from 'react-hot-toast'
+import { RefObject, useRef } from 'react'
 
 export type RoomDialogProps = {
   room: string

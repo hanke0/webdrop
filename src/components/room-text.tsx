@@ -1,7 +1,7 @@
-import { useRef } from 'react'
 import { RoomDialog } from './room-dialog'
 import { isGoodRoom } from '../lib/room'
 import { P2P } from '../lib/p2p'
+import { useRef } from 'react'
 
 export type RoomTextProps = {
   peer: P2P

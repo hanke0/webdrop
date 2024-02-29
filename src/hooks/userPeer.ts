@@ -1,9 +1,8 @@
-import { getRoomAndUser, getLocalRoom } from '../lib/client'
+import { getLocalRoom, getRoomAndUser } from '../lib/client'
+import { LazyConnection, P2P } from '../lib/p2p'
+import { isGoodRoom, isGoodUser, randomRoom, randomUser } from '../lib/room'
 import { useEffect, useState } from 'react'
-import { P2P, LazyConnection } from '../lib/p2p'
 import { toast } from 'react-hot-toast'
-
-import { randomUser, randomRoom, isGoodRoom, isGoodUser } from '../lib/room'
 
 const getRoom = (rid: string) => {
   if (rid && isGoodRoom(rid)) {

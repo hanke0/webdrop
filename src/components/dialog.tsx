@@ -1,4 +1,4 @@
-import { useEffect, useState, RefObject, useCallback } from 'react'
+import { RefObject, useCallback, useEffect, useState } from 'react'
 
 type Props = {
   onClose?: () => void

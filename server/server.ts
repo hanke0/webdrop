@@ -1,9 +1,9 @@
 import 'dotenv/config'
 import express from 'express'
-import { IncomingMessage, createServer } from 'http'
-import { ExpressPeerServer, IClient } from 'peer'
-import { exit } from 'process'
+import { ExpressPeerServer } from 'peer'
 import morgan from 'morgan'
+import helmet from 'helmet'
+import { IncomingMessage, createServer } from 'http'
 import { createHash } from 'crypto'
 
 const app = express()
@@ -52,19 +52,51 @@ const getUserIPRoom = (req: IncomingMessage) => {
   return { name, ip }
 }
 
-app.enable('trust proxy')
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1)
+  app.use(helmet())
+} else {
+  console.log('WARNING: Development mode, set NOE_ENV=production to enable security features in production.')
+  app.use((_, rsp, next) => {
+    rsp.header('Access-Control-Allow-Origin', '*')
+    next()
+  })
+}
 app.use(morgan('short'))
+
+const _u = (url: string, prefix: string) => {
+  if (prefix.endsWith('/')) {
+    prefix = prefix.slice(0, -1)
+  }
+  if (!prefix.startsWith('/')) {
+    prefix = '/' + prefix
+  }
+  if (!url.startsWith('/')) {
+    url = '/' + url
+  }
+  url = prefix + url
+  return url
+}
+
+const u = (url: string) => {
+  return _u(url, process.env.BASE_URL || '/')
+}
+
+const pu = (url: string) => {
+  return _u(url, process.env.WEB_DROP_PEER_PATH || '/peer')
+}
+
 app.use(function (req, res, next) {
   if (req.path === u('/')) {
     const room = getUserIPRoom(req)
     res.cookie('userip', room.ip, { maxAge: 900000 })
     res.cookie('useriproom', room.name, { maxAge: 900000 })
   }
-  return next()
+  next()
 })
 
 const peerServer = ExpressPeerServer(server, {
-  path: '/peer',
+  path: pu('/'),
   proxied: true,
 })
 
@@ -89,36 +121,29 @@ function getRoom(id: string) {
 
 peerServer.on('connection', (client) => {
   const id = client.getId()
-  console.log('connection: ', id)
-})
-
-peerServer.on('message', (client, message) => {
-  const id = client.getId()
-  if (message.type === 'HEARTBEAT') {
-    const rid = getRoom(client.getId())
-    if (!rid) {
-      client.send({ type: 'ERROR', payload: 'Invalid room' })
-      return
-    }
-    const room = rooms.get(rid)
-    if (!room) {
-      rooms.set(rid, [{ id: id }])
-      console.log('room created: ', id)
-      return
-    }
-    const user = room.find((u) => u.id === id)
-    if (!user) {
-      room.push({ id: id })
-      console.log('user joined: ', id)
-      return
-    }
+  console.log('connected: ', id)
+  const rid = getRoom(client.getId())
+  if (!rid) {
+    client.send({ type: 'ERROR', payload: 'Invalid room' })
+    return
+  }
+  const room = rooms.get(rid)
+  if (!room) {
+    rooms.set(rid, [{ id: id }])
+    console.log('room created: ', id)
+    return
+  }
+  const user = room.find((u) => u.id === id)
+  if (!user) {
+    room.push({ id: id })
+    console.log('user joined: ', id)
+    return
   }
 })
 
 peerServer.on('disconnect', (client) => {
   const id = client.getId()
-  const ws = client.getSocket()
-  console.log('disconnect: ', id, ws?.url)
+  console.log('disconnect: ', id)
   const rid = getRoom(client.getId())
   if (rid) {
     const room = rooms.get(rid)
@@ -140,21 +165,11 @@ peerServer.on('error', (error) => {
   console.log('peerServer error: ', error)
 })
 
-const baseURL = (() => {
-  const url = process.env.WEB_DROP_BASE_URL || '/'
-  if (url.endsWith('/')) {
-    return url.slice(0, -1)
-  }
-  return url
-})()
 
-const u = (url: string) => {
-  return baseURL + url
-}
 
 app.use(u('/'), peerServer)
 app.use(u('/'), express.static('dist'))
-app.use(u('/api/room/:room/users'), (req, res) => {
+app.use(pu('/api/room/:room/users'), (req, res) => {
   const rid = req.params.room
   if (!rid) {
     res.status(400).send('Invalid room')
@@ -183,5 +198,5 @@ server.listen(
 
 server.on('error', (error) => {
   console.log('Error: ', error)
-  exit(1)
+  process.exit(1)
 })
