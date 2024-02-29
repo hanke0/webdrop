@@ -24,7 +24,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
 
   return (
     <Dialog open={props.open} onClose={props.onClose}>
-      <h2 className="my-2 text-2xl font-bold">Your Room</h2>
+      <h2 className="my-2 text-2xl font-bold">Your are in Room</h2>
       <CodeBox
         length={6}
         onFull={onFull}

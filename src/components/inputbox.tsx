@@ -3,6 +3,7 @@ export type UploadProps = {
   placeholder: string
   onSubmit: (e: string) => void
   type?: string
+  autoComplete?: string
 }
 
 export function InputBox(props: UploadProps) {
@@ -23,10 +24,11 @@ export function InputBox(props: UploadProps) {
           placeholder={props.placeholder}
           name="input"
           required
+          autoComplete={props.autoComplete}
         />
         <button
           type="submit"
-          className="text-white absolute end-2.5 bottom-1 bg-blue-700 font-medium rounded-lg text-sm px-2 py-1"
+          className="text-white absolute end-2.5 bottom-1 text-gray-700 bg-gray-100 font-medium rounded-lg text-sm px-2 py-1"
         >
           {props.buttonText}
         </button>

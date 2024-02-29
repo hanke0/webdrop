@@ -44,7 +44,7 @@ export function CodeBox(props: CodeBoxProps) {
     }
     setCodeAt(i, value)
     if (value !== '') {
-      focusOn(i + 1)
+      focusOn(i, 1)
     }
     const full = code.join('')
     if (props.onChange) {
@@ -59,19 +59,25 @@ export function CodeBox(props: CodeBoxProps) {
     setCode(newCode)
   }
 
-  const focusOn = (i: number) => {
+  const focusOn = (cur: number, step: number) => {
+    const i = cur + step
     if (i < 0) {
+      if (cur === 0) {
+        doms.current[props.length - 1].focus()
+        return
+      }
       doms.current[0].focus()
       return
     }
     if (i > props.length - 1) {
+      if (cur === props.length - 1) {
+        doms.current[0].focus()
+        return
+      }
       doms.current[props.length - 1].focus()
       return
     }
-    const element = doms.current[i]
-    if (element) {
-      element.focus()
-    }
+    doms.current[i].focus()
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>, i: number) => {
@@ -80,18 +86,18 @@ export function CodeBox(props: CodeBoxProps) {
       case 'Backspace':
         e.preventDefault()
         setCodeAt(i, '')
-        focusOn(i - 1)
+        focusOn(i, -1)
         break
       case 'ArrowLeft':
       case 'ArrowUp':
         e.preventDefault()
-        focusOn(i - 1)
+        focusOn(i, -1)
         break
       case 'ArrowRight':
       case 'ArrowDown':
       case 'Tab':
         e.preventDefault()
-        focusOn(i + 1)
+        focusOn(i, 1)
         break
       case 'Enter':
         e.preventDefault()
@@ -109,25 +115,30 @@ export function CodeBox(props: CodeBoxProps) {
     }
   }
 
-  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>, cur: number) => {
     e.preventDefault()
     const pastedValue = e.clipboardData.getData('Text')
     let currentInput = 0
-    for (let i = 0; i < props.length; i++) {
-      let pastedCharacter = pastedValue.charAt(i)
+    for (let i = cur; i < props.length; i++) {
+      focusOn(i, 0)
+      let pastedCharacter = pastedValue.charAt(currentInput)
       if (!pastedCharacter) {
         return
       }
       if (props.beforeChange) {
         pastedCharacter = props.beforeChange(pastedCharacter)
       }
-      if (props.validator && !props.validator(pastedCharacter, currentInput)) {
+      if (props.validator && !props.validator(pastedCharacter, i)) {
         return
       }
-      doms.current[currentInput].value = pastedCharacter
+      doms.current[i].value = pastedCharacter
       currentInput++
-      focusOn(currentInput)
     }
+  }
+
+  const onCopy = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    navigator.clipboard?.writeText(code.join(''))
   }
 
   const codeBox = []
@@ -151,7 +162,8 @@ export function CodeBox(props: CodeBoxProps) {
         onChange={(e) => onChange(e, i)}
         onKeyDown={(e) => onKeyDown(e, i)}
         onFocus={(e) => e.target.select()}
-        onPaste={onPaste}
+        onPaste={(e) => onPaste(e, i)}
+        onCopy={onCopy}
       />
     )
   }

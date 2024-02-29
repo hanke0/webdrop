@@ -169,9 +169,10 @@ export default function Home() {
             <UserText uid={peer.id} user={peer.user}></UserText>
             <div className="w-1/2 my-2">
               <InputBox
-                placeholder="Input user id to connect..."
+                placeholder="Put your friend's name here.."
                 buttonText="Invite"
                 onSubmit={(id) => handleConnectToUser(id)}
+                autoComplete='off'
               />
             </div>
           </Card>
