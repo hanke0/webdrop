@@ -16,8 +16,8 @@ export function RoomText(props: RoomTextProps) {
 
   return (
     <div className={`text-1xl mb-3`}>
-      Room:
-      <a className="text-blue-500 hover:pointer" href="#" ref={ref}>
+      Room
+      <a className="text-blue-500 hover:pointer px-3 border rounded-full ml-6" href="#" ref={ref}>
         {props.peer.room}
       </a>
       <RoomDialog room={props.peer.room} open={ref} />

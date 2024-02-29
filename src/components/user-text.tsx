@@ -29,7 +29,7 @@ export function UserText(props: UserTextProps) {
           width={20}
           height={20}
         />
-        <span className="select-all">{props.user}</span>
+        <span className="cursor-pointer">{props.user}</span>
       </span>
     </div>
   )

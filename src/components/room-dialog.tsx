@@ -23,7 +23,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
   const url = useRef(getRoomURL(props.room).toString())
 
   return (
-    <Dialog open={props.open} onClose={props.onClose}>
+    <Dialog open={props.open} onClose={props.onClose} >
       <h2 className="my-2 text-2xl font-bold">Your are in Room</h2>
       <CodeBox
         length={6}

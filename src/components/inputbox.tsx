@@ -28,7 +28,7 @@ export function InputBox(props: UploadProps) {
         />
         <button
           type="submit"
-          className="text-white absolute end-2.5 bottom-1 text-gray-700 bg-gray-100 font-medium rounded-lg text-sm px-2 py-1"
+          className="absolute end-2.5 bottom-1 text-gray-600 bg-gray-100 font-medium rounded-lg text-sm px-2 py-1"
         >
           {props.buttonText}
         </button>

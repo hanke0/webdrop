@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useEffect, useState } from 'react'
+import { RefObject, useCallback, useEffect, useState, useRef } from 'react'
 
 type Props = {
   onClose?: () => void
@@ -10,6 +10,7 @@ export type OpenState = boolean | (() => boolean) | RefObject<HTMLElement>
 
 export function Dialog(props: Props) {
   const [isOpen, setOpen] = useState(false)
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   const click = useCallback(() => {
     setOpen(true)
@@ -51,13 +52,22 @@ export function Dialog(props: Props) {
     setOpen(false)
   }
 
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeRef.current?.click()
+    }
+  }
+
   return (
     <div
       className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full`}
+      onKeyDown={onKeyDown}
     >
       <div className="relative p-4 w-full max-w-md max-h-full m-auto">
         <div className="relative bg-white rounded-lg shadow">
           <button
+            ref={closeRef}
             onClick={onClose}
             type="button"
             className="absolute top-3 end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
