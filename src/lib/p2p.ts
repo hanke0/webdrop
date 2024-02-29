@@ -137,7 +137,7 @@ export class P2P {
   }
 
   isSelf(id: string) {
-    return this.getConnectID(id) === id
+    return this.getConnectID(id) === this.id
   }
 
   connect(fullName: string, callback: ConnectionCallback) {
