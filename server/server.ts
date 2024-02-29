@@ -74,7 +74,10 @@ const _u = (url: string, prefix: string) => {
   if (!url.startsWith('/')) {
     url = '/' + url
   }
-  url = prefix + url
+  if (url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  url = prefix + url;
   return url
 }
 
