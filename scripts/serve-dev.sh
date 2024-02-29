@@ -13,6 +13,14 @@ export NODE_ENV=development
 
 cd server
 npm run build
+
+case "$1" in
+peer)
+    node server.js
+    exit 0
+    ;;
+esac
+
 node server.js &
 peerpid=$!
 trap "kill $peerpid" TERM INT EXIT
