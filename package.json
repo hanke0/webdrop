@@ -9,7 +9,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "fmt": "npm run lint -- --fix",
     "build-server": "cd server && npm run build",
-    "serve-dev": "./scripts/dev.sh"
+    "serve-dev": "./scripts/serve-dev.sh"
   },
   "dependencies": {
     "js-cookie": "^3.0.5",
