@@ -1,5 +1,4 @@
 name: CI
-run-name: CI start by ${{ github.actor }} on {{ github.ref }}
 on: [push, pull_request]
 
 jobs:
