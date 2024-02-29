@@ -129,17 +129,19 @@ export class P2P {
     })
   }
 
+  getConnectID(user: string) {
+    if (isGoodUser(user)) {
+      return this.room + '-' + user
+    }
+    return user
+  }
+
+  isSelf(id: string) {
+    return this.getConnectID(id) === id
+  }
+
   connect(fullName: string, callback: ConnectionCallback) {
-    let id: string
-    if (isGoodUser(fullName)) {
-      id = this.room + '-' + fullName
-    } else {
-      id = fullName
-    }
-    if (id === this.id) {
-      toast.error('connect to self')
-      return
-    }
+    const id = this.getConnectID(fullName)
     console.log('make new connection:', this.id, id)
     const conn = this.peer.connect(id, { reliable: true, label: this.id })
     return new Connection(id, conn, callback)

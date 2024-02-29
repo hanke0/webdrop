@@ -94,6 +94,10 @@ export default function Home() {
       toast.error('Connect fail: peer is null')
       return
     }
+    if (peer.isSelf(fullName)) {
+      toast.error('Connect fail: cannot connect to self')
+      return
+    }
     peer.connect(fullName, {
       open: (conn) => addInUserList(conn),
       close: (conn) => removeFromUserList(conn),
@@ -134,18 +138,18 @@ export default function Home() {
           return
         }
         if (!conns.find((item) => item.id === id)) {
-          pending.push(
-            new LazyConnectionImpl(id, (peer: P2P) => {
-              return peer.connect(id, {
-                open: (conn) => addRoomUsers(conn),
-                close: (conn) => removeRoomUsers(conn),
-                error: (conn, err) => {
-                  toast.error(`connection with ${conn.id} fail: ${err.message}`)
-                  removeRoomUsers(conn)
-                },
-              })
+          const builder = (p: P2P) => {
+            return p.connect(id, {
+              open: (conn) => addRoomUsers(conn),
+              close: (conn) => removeRoomUsers(conn),
+              error: (conn, err) => {
+                toast.error(`connection with ${conn.id} fail: ${err.message}`)
+                removeRoomUsers(conn)
+              },
             })
-          )
+          }
+          const conn = new LazyConnectionImpl(id, builder)
+          pending.push(conn)
         }
       })
       resetRoomUsers(pending)
