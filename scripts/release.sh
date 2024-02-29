@@ -2,17 +2,19 @@
 
 set -Eeo pipefail
 
+export NODE_ENV=production
+
 cd "$(dirname "$0")/.."
 pwd
 
 rm -rf release
 mkdir release
 
-npm i
+npm ci
 npm run build
 
 cd server
-npm i
+npm ci
 npm run build
 cd ..
 
@@ -22,5 +24,5 @@ cp server/package-lock.json release/package-lock.json
 cp server/server.js release/server.js
 cp .env release/.env
 cd release
-npm i --omit=dev --omit=optional --omit=peer --include=prod --install-strategy nested
+npm ci --omit=dev --omit=optional --omit=peer --include=prod --install-strategy nested
 tar -czf ../webdrop.tar.gz .
