@@ -136,6 +136,10 @@ export class P2P {
     } else {
       id = fullName
     }
+    if (id === this.id) {
+      toast.error('connect to self')
+      return
+    }
     console.log('make new connection:', this.id, id)
     const conn = this.peer.connect(id, { reliable: true, label: this.id })
     return new Connection(id, conn, callback)

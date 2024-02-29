@@ -22,7 +22,7 @@ import useConnections from './hooks/useConnections'
 import { splitRoomAndUser } from './lib/room'
 import { sleep } from './lib/client'
 import { toast } from 'react-hot-toast'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 const generateListItem = (item: LazyConnection) => {
   const id = item.id
@@ -65,8 +65,22 @@ const sendFile = async (conn: Connection, file: File) => {
 
 export default function Home() {
   const [conns, addConn, removeConn] = useConnections()
+  const [roomUsers, addRoomUsers, removeRoomUsers, resetRoomUsers] = useConnections()
   const peer = usePeer(addConn, removeConn)
   const [curConn, setCurConn] = useState<LazyConnection | null>(null)
+
+  const addInUserList = useCallback((conn: LazyConnection) => {
+    if (!conns.find((item) => item.id === conn.id)) {
+      removeRoomUsers(conn)
+      addConn(conn)
+      return
+    }
+  }, [removeRoomUsers, addConn, conns])
+
+  const removeFromUserList = useCallback((conn: LazyConnection) => {
+    removeConn(conn)
+    removeRoomUsers(conn)
+  }, [removeConn, removeRoomUsers])
 
   if (!peer) {
     return <LoadingPage />
@@ -81,11 +95,11 @@ export default function Home() {
       return
     }
     peer.connect(fullName, {
-      open: (conn) => addConn(conn),
-      close: (conn) => removeConn(conn),
+      open: (conn) => addInUserList(conn),
+      close: (conn) => removeFromUserList(conn),
       error: (conn, err) => {
         toast.error(`connect to ${conn.id} fail: ${err.message}`)
-        removeConn(conn)
+        removeFromUserList(conn)
       },
     })
   }
@@ -112,31 +126,29 @@ export default function Home() {
         return
       }
       const data = await res.json()
-      console.log('fetch room users:', data)
-      data.map((ele: { id: string }) => {
+      console.log('fetch room users:', peer.id, data)
+      const pending: LazyConnection[] = []
+      data.forEach((ele: { id: string }) => {
         const id = ele.id
         if (!id || id == peer.id) {
           return
         }
-        const pending: LazyConnection[] = []
         if (!conns.find((item) => item.id === id)) {
           pending.push(
             new LazyConnectionImpl(id, (peer: P2P) => {
               return peer.connect(id, {
-                open: (conn) => addConn(conn),
-                close: (conn) => removeConn(conn),
+                open: (conn) => addRoomUsers(conn),
+                close: (conn) => removeRoomUsers(conn),
                 error: (conn, err) => {
                   toast.error(`connection with ${conn.id} fail: ${err.message}`)
-                  removeConn(conn)
+                  removeRoomUsers(conn)
                 },
               })
             })
           )
         }
-        if (pending.length > 0) {
-          addConn(...pending)
-        }
       })
+      resetRoomUsers(pending)
     } catch (err) {
       console.log('fetch room users fail:', err)
       toast.error(`fetch room users fail: ${err}`)
@@ -167,7 +179,7 @@ export default function Home() {
           />
           <Card className="h-full">
             <div className={`text-1xl font-bold`}>
-              {conns.length} Users
+              {conns.length + roomUsers.length} Users
               <Fresh
                 width={16}
                 height={16}
@@ -179,7 +191,7 @@ export default function Home() {
             <List
               className="flex flex-row flex-wrap justify-center"
               itemClassName="rounded-full px-6"
-              items={conns}
+              items={[...conns, ...roomUsers]}
               selectCallback={(item) => setCurConn(item)}
               genContent={generateListItem}
             />

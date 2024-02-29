@@ -37,6 +37,7 @@ export function List<T>(props: ListProps<T>) {
     }
   }
   const id = useId()
+  console.log("items", props.items)
   return (
     <ul role="list" className={props.className}>
       {props.items.map((ele, i) => (

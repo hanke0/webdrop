@@ -32,5 +32,8 @@ export default function useConnections() {
     })
   }, [])
 
-  return [connections, addConnection, removeConnection] as const
+  const resetConnection = useCallback((conns: LazyConnection[]) => {
+    setConnections(conns)
+  }, [])
+  return [connections, addConnection, removeConnection, resetConnection] as const
 }
