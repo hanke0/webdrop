@@ -14,7 +14,7 @@ function ListItem<T>(props: ListItemProps<T>) {
   }
   return (
     <li
-      className={`${props.itemClassName} shadow my-2 py-2 px-2 sm:py-2 hover:bg-slate-100`}
+      className={`${props.itemClassName} mx-2 shadow my-2 py-2 px-2 sm:py-2 hover:bg-slate-100`}
       onClick={onClick}
     >
       {props.genContent(item)}

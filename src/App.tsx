@@ -27,7 +27,7 @@ import { useState } from 'react'
 const generateListItem = ({ id }: LazyConnection) => {
   const [, user] = splitRoomAndUser(id)
   return (
-    <div className="inline block">
+    <div className="inline block cursor-pointer">
       <UserHead
         user={user || ''}
         className="inline text-center mb-1"
