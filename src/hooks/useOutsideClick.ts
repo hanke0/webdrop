@@ -6,14 +6,19 @@ export default function useOutsideClick(
   handleClose: () => void,
   ref: React.RefObject<HTMLElement>) {
   const handleClick = useCallback((event: MouseEvent) => {
-    if (ref?.current?.contains(event.target as Node)) {
+    if (!ref?.current) {
+      return
+    }
+    if (!ref.current.contains(event.target as Node)) {
       handleClose();
     }
   }, [handleClose, ref]);
 
   useEffect(() => {
-    document.addEventListener(MOUSE_UP, handleClick);
-
-    return () => { document.removeEventListener(MOUSE_UP, handleClick); };
+    const click = handleClick
+    document.addEventListener(MOUSE_UP, click);
+    return () => {
+      document.removeEventListener(MOUSE_UP, click);
+    };
   }, [handleClick]);
 }

@@ -1,3 +1,4 @@
+import useEscClose from '../hooks/useEscClose'
 import useOutsideClick from '../hooks/useOutsideClick'
 import { RefObject, useCallback, useEffect, useState, useRef } from 'react'
 
@@ -26,6 +27,7 @@ export function Dialog(props: Props) {
   }
 
   useOutsideClick(onClose, dialogRef)
+  useEscClose(onClose)
 
   useEffect(() => {
     let set = false
@@ -60,9 +62,8 @@ export function Dialog(props: Props) {
   return (
     <div
       className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full`}
-      ref={dialogRef}
     >
-      <div className="relative p-4 w-full max-w-md max-h-full m-auto">
+      <div className="relative p-4 w-full max-w-md max-h-full m-auto" ref={dialogRef}>
         <div className="relative bg-white rounded-lg shadow">
           <button
             ref={closeRef}
