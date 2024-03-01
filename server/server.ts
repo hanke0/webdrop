@@ -71,6 +71,9 @@ const cleanPath = (path: string) => {
 }
 
 const _u = (url: string, prefix: string) => {
+  if (url == "/" || !url) {
+    return `/${cleanPath(prefix)}`
+  }
   return `/${cleanPath(prefix)}/${cleanPath(url)}`
 }
 
