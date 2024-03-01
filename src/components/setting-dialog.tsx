@@ -6,5 +6,5 @@ export type SettingDialogProps = {
 }
 
 export const SettingDialog = (props: SettingDialogProps) => {
-  return <Dialog onClose={props.onClose}></Dialog>
+  return <Dialog onClose={props.onClose} />
 }

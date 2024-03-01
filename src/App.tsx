@@ -145,13 +145,13 @@ export default function Home() {
         <div className="h-full items-center justify-center">
           <Card className="mb-4">
             <RoomText peer={peer} />
-            <UserText uid={peer.id} user={peer.user}></UserText>
+            <UserText uid={peer.id} user={peer.user} />
             <div className="w-1/2 my-2">
               <InputBox
                 placeholder="Put your friend's name here.."
                 buttonText="Invite"
                 onSubmit={(id) => handleConnectToUser(id)}
-                autoComplete='off'
+                autoComplete="off"
               />
             </div>
           </Card>
@@ -181,7 +181,7 @@ export default function Home() {
             />
           </Card>
         </div>
-        <div className="h-8"></div>
+        <div className="h-8" />
       </Card>
     </Main>
   )

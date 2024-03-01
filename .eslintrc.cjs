@@ -5,14 +5,16 @@ module.exports = {
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
+    'plugin:react/recommended',
   ],
   ignorePatterns: [
     '/.git',
     '/.github',
   ],
   parser: '@typescript-eslint/parser',
-  plugins: ['react-refresh', 'react-hooks', 'import'],
+  plugins: ['@typescript-eslint', 'react', 'react-refresh', 'react-hooks', 'import'],
   rules: {
+    'react/react-in-jsx-scope': 'off',
     'react-refresh/only-export-components': [
       'warn',
       { allowConstantExport: true },
@@ -41,5 +43,20 @@ module.exports = {
       ignoreRegExpLiterals: true,
       ignorePattern: 'd="([\\s\\S]*?)"' // ignore svg data
     }],
+    'react/jsx-closing-bracket-location': ['error', 'line-aligned'],
+    'react/jsx-closing-tag-location': 'error',
+    'react/jsx-tag-spacing': 'error',
+    'react/jsx-curly-spacing': ['error', 'never'],
+    'jsx-quotes': ['error', 'prefer-double'],
+    'no-multi-spaces': 'error',
+    'react/jsx-tag-spacing': 'error',
+    'react/jsx-boolean-value': 'error',
+    'react/jsx-wrap-multilines': 'error',
+    'react/self-closing-comp': 'error',
   },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
 }

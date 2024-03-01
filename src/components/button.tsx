@@ -11,7 +11,7 @@ export type ButtonProps = {
 function cancelContent(txt: string) {
   return (
     <>
-      <LoadingIcon className="w-4 h-4 me-3"></LoadingIcon>
+      <LoadingIcon className="w-4 h-4 me-3" />
       <span>{txt}</span>
     </>
   )
