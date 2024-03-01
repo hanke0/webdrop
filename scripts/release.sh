@@ -2,7 +2,6 @@
 
 set -Eeo pipefail
 
-
 cd "$(dirname "$0")/.."
 pwd
 
