@@ -45,6 +45,11 @@ export class P2P {
   room: string
   id: string
   err?: Error
+  closed?: boolean
+
+  get ok() {
+    return !this.err && !this.closed
+  }
 
   constructor(options: Options) {
     console.log(config)
@@ -79,6 +84,7 @@ export class P2P {
 
   close() {
     console.log('peer is closing: ', this.id)
+    this.closed = true
     this.peer.disconnect()
     this.peer.destroy()
   }
@@ -101,6 +107,7 @@ export class P2P {
   onDisconnect(callback: () => void) {
     this.peer.on('disconnected', () => {
       console.log('peer is disconnected:', this.id)
+      this.closed = true
       callback()
     })
   }
@@ -108,12 +115,14 @@ export class P2P {
   onClose(callback: () => void) {
     this.peer.on('close', () => {
       console.log('peer is closed:', this.id)
+      this.closed = true
       callback()
     })
   }
 
   onConnection(callback: ConnectionCallback) {
     this.peer.on('connection', (conn) => {
+      console.log('new connection from:', conn.peer)
       const c = new Connection(conn.peer, conn, callback)
       if (callback.knock) {
         callback.knock(c)
@@ -124,8 +133,9 @@ export class P2P {
   onError(callback: (err: Error) => void) {
     this.peer.on('error', (e) => {
       console.log('peer error:', this.id, e)
-      callback(e)
       this.err = e
+      this.closed = true
+      callback(e)
     })
   }
 
@@ -225,9 +235,8 @@ export class Connection implements LazyConnection {
       callback.error(this, err)
     })
     conn.on('data', (payload) => {
-      console.log('receive data from :', this.id)
       const data = payload as Data
-      console.log('peer receive data:', this.id, data.type, data.name)
+      console.log('receive data:', this.id, data.type, data.name)
       if (data.type !== 'file') {
         toast(`receive message from ${data.name}: ${data.payload}`)
         return

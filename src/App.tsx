@@ -18,11 +18,11 @@ import { UserText } from './components/user-text'
 import { FileSendDialog } from './components/file-send-dialog'
 import { LoadingPage } from './components/loading-page'
 import { ErrorPage } from './components/error-page'
-import useConnections from './hooks/useConnections'
 import { splitRoomAndUser } from './lib/room'
 import { sleep } from './lib/client'
+import useUsers from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
 const generateListItem = (item: LazyConnection) => {
   const id = item.id
@@ -64,23 +64,9 @@ const sendFile = async (conn: Connection, file: File) => {
 }
 
 export default function Home() {
-  const [conns, addConn, removeConn] = useConnections()
-  const [roomUsers, addRoomUsers, removeRoomUsers, resetRoomUsers] = useConnections()
-  const peer = usePeer(addConn, removeConn)
+  const [getUsers, addUser, removeUser, resetRoomUsers] = useUsers()
+  const peer = usePeer(addUser, removeUser)
   const [curConn, setCurConn] = useState<LazyConnection | null>(null)
-
-  const addInUserList = useCallback((conn: LazyConnection) => {
-    if (!conns.find((item) => item.id === conn.id)) {
-      removeRoomUsers(conn)
-      addConn(conn)
-      return
-    }
-  }, [removeRoomUsers, addConn, conns])
-
-  const removeFromUserList = useCallback((conn: LazyConnection) => {
-    removeConn(conn)
-    removeRoomUsers(conn)
-  }, [removeConn, removeRoomUsers])
 
   if (!peer) {
     return <LoadingPage />
@@ -99,11 +85,11 @@ export default function Home() {
       return
     }
     peer.connect(fullName, {
-      open: (conn) => addInUserList(conn),
-      close: (conn) => removeFromUserList(conn),
+      open: (conn) => addUser(conn),
+      close: (conn) => removeUser(conn),
       error: (conn, err) => {
         toast.error(`connect to ${conn.id} fail: ${err.message}`)
-        removeFromUserList(conn)
+        removeUser(conn)
       },
     })
   }
@@ -129,29 +115,22 @@ export default function Home() {
         toast.error('fetch room users fail: ' + res.statusText)
         return
       }
-      const data = await res.json()
+      const data = await res.json() as { id: string }[]
       console.log('fetch room users:', peer.id, data)
-      const pending: LazyConnection[] = []
-      data.forEach((ele: { id: string }) => {
+      const pending = data.map((ele: { id: string }) => {
         const id = ele.id
-        if (!id || id == peer.id) {
-          return
+        const builder = (p: P2P) => {
+          return p.connect(id, {
+            open: (conn) => addUser(conn),
+            close: (conn) => removeUser(conn),
+            error: (conn, err) => {
+              toast.error(`connection with ${conn.id} fail: ${err.message}`)
+              removeUser(conn)
+            },
+          })
         }
-        if (!conns.find((item) => item.id === id)) {
-          const builder = (p: P2P) => {
-            return p.connect(id, {
-              open: (conn) => addRoomUsers(conn),
-              close: (conn) => removeRoomUsers(conn),
-              error: (conn, err) => {
-                toast.error(`connection with ${conn.id} fail: ${err.message}`)
-                removeRoomUsers(conn)
-              },
-            })
-          }
-          const conn = new LazyConnectionImpl(id, builder)
-          pending.push(conn)
-        }
-      })
+        return new LazyConnectionImpl(id, builder)
+      }).filter((c) => c.id !== peer.id)
       resetRoomUsers(pending)
     } catch (err) {
       console.log('fetch room users fail:', err)
@@ -184,7 +163,7 @@ export default function Home() {
           />
           <Card className="h-full">
             <div className={`text-1xl font-bold`}>
-              {conns.length + roomUsers.length} Users
+              {getUsers().length} Users
               <Fresh
                 width={16}
                 height={16}
@@ -196,7 +175,7 @@ export default function Home() {
             <List
               className="flex flex-row flex-wrap justify-center"
               itemClassName="rounded-full px-6"
-              items={[...conns, ...roomUsers]}
+              items={getUsers()}
               selectCallback={(item) => setCurConn(item)}
               genContent={generateListItem}
             />

@@ -29,6 +29,7 @@ export function usePeer(
   const [peer, setPeer] = useState<P2P | null>(null)
 
   useEffect(() => {
+    const p = peer
     if (peer) {
       return
     }
@@ -54,19 +55,16 @@ export function usePeer(
       setPeer(null)
     })
     newPeer.onConnection({
-      open: (conn) => {
-        console.log('peer connection open:', conn.id)
-        addConnection(conn)
-      },
-      error: (conn, err) => {
-        console.log('peer connection error:', conn.id, err)
-        removeConnection(conn)
-      },
-      close: (conn) => {
-        console.log('peer connection close:', conn.id)
-        removeConnection(conn)
-      },
+      open: addConnection,
+      error: removeConnection,
+      close: removeConnection,
     })
+    return () => {
+      if (p && !p.ok) {
+        p.close()
+        setPeer(null)
+      }
+    }
   }, [peer, addConnection, removeConnection])
   return peer
 }
