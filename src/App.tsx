@@ -18,27 +18,23 @@ import { UserText } from './components/user-text'
 import { FileSendDialog } from './components/file-send-dialog'
 import { LoadingPage } from './components/loading-page'
 import { ErrorPage } from './components/error-page'
-import { splitRoomAndUser } from './lib/room'
+import { getUserShowName, splitRoomAndUser } from './lib/room'
 import { sleep } from './lib/client'
 import useUsers from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
 import { useState } from 'react'
 
-const generateListItem = (item: LazyConnection) => {
-  const id = item.id
-  let [, user] = splitRoomAndUser(id)
-  if (!user) {
-    user = id
-  }
+const generateListItem = ({ id }: LazyConnection) => {
+  const [, user] = splitRoomAndUser(id)
   return (
     <div className="inline block">
       <UserHead
-        user={user}
+        user={user || ''}
         className="inline text-center mb-1"
         width={40}
         height={40}
       />
-      <span className="inline text-[16px]">{user}</span>
+      <span className="inline text-[16px]">{user || id}</span>
     </div>
   )
 }
@@ -145,7 +141,7 @@ export default function Home() {
         <div className="h-full items-center justify-center">
           <Card className="mb-4">
             <RoomText peer={peer} />
-            <UserText uid={peer.id} user={peer.user} />
+            <UserText uid={peer.id} />
             <div className="w-1/2 my-2">
               <InputBox
                 placeholder="Put your friend's name here.."
@@ -159,7 +155,7 @@ export default function Home() {
             open={() => !!curConn}
             onClose={() => setCurConn(null)}
             handleSendFile={handleSendFile}
-            user={curConn?.id || ''}
+            user={curConn?.id ? getUserShowName(curConn.id) : ''}
           />
           <Card className="h-full">
             <div className={`text-1xl font-bold`}>

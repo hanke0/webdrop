@@ -44,6 +44,19 @@ export const getUserIconPath = (uid: string): string => {
   return ''
 }
 
+export const getUserShowName = (uid: string): string => {
+  if (isGoodUser(uid)) {
+    return uid
+  }
+  if (isGoodRoomAndName(uid)) {
+    const index = uid.indexOf('-')
+    if (index !== -1) {
+      return uid.substring(index + 1)
+    }
+  }
+  return uid
+}
+
 export const splitRoomAndUser = (uid: string): [string, string] | [] => {
   if (!isGoodRoomAndName(uid)) {
     return []

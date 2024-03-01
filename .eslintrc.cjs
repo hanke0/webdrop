@@ -53,6 +53,7 @@ module.exports = {
     'react/jsx-boolean-value': 'error',
     'react/jsx-wrap-multilines': 'error',
     'react/self-closing-comp': 'error',
+    'no-param-reassign': 'error',
   },
   "settings": {
     "react": {

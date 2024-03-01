@@ -64,21 +64,14 @@ if (process.env.NODE_ENV === 'production') {
 }
 app.use(morgan('short'))
 
+const cleanPath = (path: string) => {
+  const end = path.endsWith('/') ? path.length - 1 : path.length
+  const start = path.startsWith('/') ? 1 : 0
+  return path.slice(start, end)
+}
+
 const _u = (url: string, prefix: string) => {
-  if (prefix.endsWith('/')) {
-    prefix = prefix.slice(0, -1)
-  }
-  if (!prefix.startsWith('/')) {
-    prefix = '/' + prefix
-  }
-  if (!url.startsWith('/')) {
-    url = '/' + url
-  }
-  if (url.endsWith('/')) {
-    url = url.slice(0, -1);
-  }
-  url = prefix + url;
-  return url
+  return `/${cleanPath(prefix)}/${cleanPath(url)}`
 }
 
 const u = (url: string) => {

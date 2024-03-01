@@ -41,8 +41,6 @@ export interface P2PError {
 
 export class P2P {
   peer: Peer
-  user: string
-  room: string
   id: string
   err?: Error
   closed?: boolean
@@ -51,10 +49,18 @@ export class P2P {
     return !this.err && !this.closed
   }
 
+  get room() {
+    const [room] = splitRoomAndUser(this.id)
+    return room || ''
+  }
+
+  get user() {
+    const [, user] = splitRoomAndUser(this.id)
+    return user || this.id
+  }
+
   constructor(options: Options) {
     console.log(config)
-    this.room = options.room
-    this.user = options.user
     const opt: PeerOptions = {
       debug: options.logLevel || 2, // default warning
       config: tunConfig,
@@ -92,14 +98,6 @@ export class P2P {
   onOpen(callback: (id: string) => void) {
     this.peer.on('open', (id) => {
       this.id = id
-      const [room, user] = splitRoomAndUser(id)
-      if (room && user) {
-        this.room = room
-        this.user = user
-      } else {
-        this.room = ''
-        this.user = id
-      }
       callback(id)
     })
   }

@@ -1,19 +1,20 @@
 import { UserHead } from './user-head'
+import { splitRoomAndUser } from '../lib/room'
 import toast from 'react-hot-toast'
 
 export type UserTextProps = {
   uid: string
-  user: string
 }
 
-export function UserText(props: UserTextProps) {
+export function UserText({ uid }: UserTextProps) {
+  const [, user] = splitRoomAndUser(uid)
   return (
     <div>
       You are
       <span
         onClick={() => {
           navigator?.clipboard
-            ?.writeText(props.uid)
+            ?.writeText(uid)
             .then(() => {
               toast.success('copy username to clipboard')
             })
@@ -25,11 +26,11 @@ export function UserText(props: UserTextProps) {
       >
         <UserHead
           className="inline mb-1"
-          user={props.user}
+          user={user || ''}
           width={20}
           height={20}
         />
-        <span className="cursor-pointer">{props.user}</span>
+        <span className="cursor-pointer">{user || uid}</span>
       </span>
     </div>
   )
