@@ -50,7 +50,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
         Click to paste or scan QR Code to share
       </div>
       <QRCode
-        className="text-center mx-auto my-4 w-64 h-64"
+        className="text-center mx-auto my-4 w-48 h-48"
         value={url.current}
       />
     </Dialog>
