@@ -63,7 +63,7 @@ export function Dialog(props: Props) {
     <div
       className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full bg-black bg-opacity-80`}
     >
-      <div className="relative px-4 pb-4 pt-32 w-full max-w-md max-h-full m-auto" ref={dialogRef}>
+      <div className="relative px-4 pb-4 pt-12 w-full max-w-md max-h-full m-auto" ref={dialogRef}>
         <div className="relative bg-white rounded-lg shadow shadow-black">
           <button
             ref={closeRef}
