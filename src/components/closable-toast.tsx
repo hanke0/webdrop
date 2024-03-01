@@ -11,7 +11,8 @@ export default function ClosableToast() {
               {icon}
               {message}
               {t.type !== 'loading' && (
-                <button onClick={() => toast.dismiss(t.id)}>
+                <button onClick={() => toast.dismiss(t.id)}
+                  className='hover:bg-gray-200 hover:fill-cyan-700 rounded px-1 py-1'>
                   <svg
                     width="16"
                     height="16"
