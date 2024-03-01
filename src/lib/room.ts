@@ -9,7 +9,7 @@ export function isGoodRoom(room: string): boolean {
 
 const usernameRE = /^[a-z]+-[a-z]+$/
 export function isGoodUser(user: string): boolean {
-  return usernameRE.test(user) && getUserIconPath(user) !== ''
+  return usernameRE.test(user) && icons.includes(user.split('-')[1])
 }
 
 const roomAndNameRE = /^[A-Z0-9]{6}-[a-z]+-[a-z]+$/
@@ -31,9 +31,14 @@ export const randomUser = (): string => {
   return `${prefix}-${name}`
 }
 
-export const getUserIconPath = (fullName: string): string => {
-  const [, name] = fullName.split('-')
-  if (icons.includes(name)) {
+export const getUserIconPath = (uid: string): string => {
+  let name = ''
+  if (isGoodUser(uid)) {
+    name = uid.split('-')[1]
+  } else if (isGoodRoomAndName(uid)) {
+    name = uid.split('-')[2]
+  }
+  if (name && icons.includes(name)) {
     return `${config.BASE_URL}icons/${name}.svg`
   }
   return ''

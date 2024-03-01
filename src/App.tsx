@@ -159,7 +159,7 @@ export default function Home() {
             open={() => !!curConn}
             onClose={() => setCurConn(null)}
             handleSendFile={handleSendFile}
-            user={peer.user}
+            user={curConn?.id || ''}
           />
           <Card className="h-full">
             <div className={`text-1xl font-bold`}>
