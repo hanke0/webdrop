@@ -176,6 +176,7 @@ export default function Home() {
               className="flex flex-row flex-wrap justify-center"
               itemClassName="rounded-full px-6"
               items={getUsers()}
+              getKey={(item) => item.id}
               selectCallback={(item) => setCurConn(item)}
               genContent={generateListItem}
             />

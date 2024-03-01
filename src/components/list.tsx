@@ -1,4 +1,4 @@
-import React, { useId } from 'react'
+import React from 'react'
 
 type ListItemProps<T> = {
   item: T
@@ -24,6 +24,7 @@ function ListItem<T>(props: ListItemProps<T>) {
 
 type ListProps<T> = {
   items: T[]
+  getKey: (item: T) => string
   selectCallback?: (item: T) => void
   genContent: (item: T) => React.ReactNode
   className?: string
@@ -36,12 +37,11 @@ export function List<T>(props: ListProps<T>) {
       props.selectCallback(ele)
     }
   }
-  const id = useId()
   return (
     <ul role="list" className={props.className}>
-      {props.items.map((ele, i) => (
+      {props.items.map((ele) => (
         <ListItem
-          key={`${id}-${i}`}
+          key={props.getKey(ele)}
           item={ele}
           selectCallback={handleClick}
           genContent={props.genContent}
