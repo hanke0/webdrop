@@ -1,5 +1,4 @@
 import { Dialog, OpenState } from './dialog'
-import { UserHead } from './user-head'
 import { Upload } from './upload'
 import { Button } from './button'
 import { useState } from 'react'
@@ -48,17 +47,8 @@ export function FileSendDialog(props: FileSendDialogProps) {
         props.onClose()
       }}
     >
-      <h3 className="py-3 px-3 text-[20px]">
-        <span className="text-[20px]">Send to</span>
-        <div className="inline border rounded-lg px-1 mx-1">
-          <UserHead
-            user={props.user}
-            className="inline text-center mb-1"
-            width={20}
-            height={20}
-          />
-          <span className="text-[20px]">{props.user}</span>
-        </div>
+      <h3 className="py-3 px-3">
+        To: {props.user}
       </h3>
       <Upload callback={(file) => setFile(file)}>
         {file && (

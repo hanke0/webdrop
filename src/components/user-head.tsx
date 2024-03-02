@@ -1,24 +1,22 @@
-import { getUserIconPath } from '../lib/room'
+import { getUserIconPath, splitRoomAndUser } from '../lib/room'
 
 export type UserHeadProps = {
-  user: string
-  className?: string
-  width?: number
-  height?: number
+  uid: string
 }
 
-export const UserHead = (props: UserHeadProps) => {
-  const path = getUserIconPath(props.user)
-  if (!path) {
-    return <></>
-  }
+export const UserHead = ({ uid }: UserHeadProps) => {
+  const src = getUserIconPath(uid)
+  const [, user] = splitRoomAndUser(uid)
   return (
-    <img
-      className={props.className}
-      width={props.width}
-      height={props.height}
-      alt={props.user}
-      src={path}
-    />
+    <div className="w-24 h-24 border rounded-full shadow">
+      <div className="p-2 rounded">
+        <img
+          className="object-fill"
+          alt="user head"
+          src={src}
+          title={user || uid}
+        />
+      </div>
+    </div>
   )
 }

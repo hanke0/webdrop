@@ -2,7 +2,6 @@ import { Card } from './components/card'
 import { Fresh } from './components/fresh'
 import { InputBox } from './components/inputbox'
 import { List } from './components/list'
-import { RoomText } from './components/room-text'
 import { UserHead } from './components/user-head'
 import {
   Connection,
@@ -18,23 +17,18 @@ import { UserText } from './components/user-text'
 import { FileSendDialog } from './components/file-send-dialog'
 import { LoadingPage } from './components/loading-page'
 import { ErrorPage } from './components/error-page'
-import { getUserShowName, splitRoomAndUser } from './lib/room'
+import { getUserShowName } from './lib/room'
 import { sleep } from './lib/client'
 import useUsers from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
 import { useState } from 'react'
 
 const generateListItem = ({ id }: LazyConnection) => {
-  const [, user] = splitRoomAndUser(id)
+  const name = getUserShowName(id)
   return (
-    <div className="inline block cursor-pointer">
-      <UserHead
-        user={user || ''}
-        className="inline text-center mb-1"
-        width={40}
-        height={40}
-      />
-      <span className="inline text-[16px]">{user || id}</span>
+    <div className="cursor-pointer max-w-24 transition ease-in-out delay-150 hover:-translate-y-1 hover:scale-110">
+      <UserHead uid={id} />
+      <p className="text-gray-700 text-center text-xs">{name}</p>
     </div>
   )
 }
@@ -80,14 +74,18 @@ export default function Home() {
       toast.error('Connect fail: cannot connect to self')
       return
     }
-    peer.connect(fullName, {
-      open: (conn) => addUser(conn),
-      close: (conn) => removeUser(conn),
-      error: (conn, err) => {
-        toast.error(`connect to ${conn.id} fail: ${err.message}`)
-        removeUser(conn)
+
+    peer.connect(
+      fullName,
+      {
+        open: (conn) => addUser(conn),
+        close: (conn) => removeUser(conn),
+        error: (conn, err) => {
+          toast.error(`connect to ${conn.id} fail: ${err.message}`)
+          removeUser(conn)
+        },
       },
-    })
+    )
   }
 
   const handleSendFile = async (file: File) => {
@@ -135,51 +133,54 @@ export default function Home() {
   }
 
   return (
-    <Main>
-      <Card>
-        <h1 className={`text-4xl font-bold text-center px-2 py-8`}>Web Drop</h1>
-        <div className="h-full items-center justify-center">
-          <Card className="mb-4">
-            <RoomText peer={peer} />
-            <UserText uid={peer.id} />
-            <div className="w-72 my-2">
-              <InputBox
-                placeholder="Your friend's name"
-                buttonText="Invite"
-                onSubmit={(id) => handleConnectToUser(id)}
-                autoComplete="off"
-              />
+    <>
+      <FileSendDialog
+        open={() => !!curConn}
+        onClose={() => setCurConn(null)}
+        handleSendFile={handleSendFile}
+        user={curConn?.id ? getUserShowName(curConn.id) : ''}
+      />
+      <Main>
+        <Card>
+          <h1 className="text-4xl font-bold text-center px-2 py-8 divide-y w-full">Web Drop</h1>
+          <div className="h-full items-center justify-center">
+            <div className="mb-4">
+              <UserText uid={peer.id} />
             </div>
-          </Card>
-          <FileSendDialog
-            open={() => !!curConn}
-            onClose={() => setCurConn(null)}
-            handleSendFile={handleSendFile}
-            user={curConn?.id ? getUserShowName(curConn.id) : ''}
-          />
-          <Card className="h-full">
-            <div className={`text-1xl font-bold`}>
-              {getUsers().length} Users
-              <Fresh
-                width={16}
-                height={16}
-                className="mb-1 mx-2 fill-current inline hover:fill-cyan-700 cursor-pointer"
-                onClick={handleRefreshRoomUsers}
-              />
-            </div>
+            <Card className="h-full min-h-48">
+              <div className="container flex py-2">
+                <div className="grow w-full py-2">
+                  {getUsers().length} Users
+                  <Fresh
+                    width={16}
+                    height={16}
+                    className="mb-1 mx-2 fill-current inline hover:fill-cyan-700 cursor-pointer"
+                    onClick={handleRefreshRoomUsers}
+                  />
+                </div>
+                <div className="w-96">
+                  <InputBox
+                    placeholder="Your friend's name"
+                    buttonText="Invite"
+                    onSubmit={(id) => handleConnectToUser(id)}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
 
-            <List
-              className="flex flex-row flex-wrap justify-center"
-              itemClassName="rounded-full px-6"
-              items={getUsers()}
-              getKey={(item) => item.id}
-              selectCallback={(item) => setCurConn(item)}
-              genContent={generateListItem}
-            />
-          </Card>
-        </div>
-        <div className="h-8" />
-      </Card>
-    </Main>
+              <List
+                className="flex flex-row flex-wrap justify-center py-4"
+                items={getUsers()}
+                itemClassName="px-4 block"
+                getKey={(item) => item.id}
+                selectCallback={(item) => setCurConn(item)}
+                genContent={generateListItem}
+              />
+            </Card>
+          </div>
+          <div className="h-8" />
+        </Card>
+      </Main>
+    </>
   )
 }

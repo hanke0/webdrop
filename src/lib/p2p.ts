@@ -141,6 +141,10 @@ export class P2P {
     if (isGoodUser(user)) {
       return this.room + '-' + user
     }
+    const maybe = user.toLowerCase().replace(' ', '-')
+    if (isGoodUser(maybe)) {
+      return this.room + "-" + maybe
+    }
     return user
   }
 
@@ -239,7 +243,7 @@ export class Connection implements LazyConnection {
         toast(`receive message from ${data.name}: ${data.payload}`)
         return
       }
-      toast(`receive file ${data.name}`)
+      toast(`receive file ${data.name}`, { icon: '📁', })
       fileDownload(data.payload, data.name)
     })
   }

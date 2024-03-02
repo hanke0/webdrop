@@ -24,7 +24,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
 
   return (
     <Dialog open={props.open} onClose={props.onClose} >
-      <h2 className="my-2 text-2xl font-bold">Your are in Room</h2>
+      <h2 className="my-2 text-2xl font-bold">You are in the room</h2>
       <CodeBox
         length={6}
         onFull={onFull}
@@ -34,21 +34,23 @@ export const RoomDialog = (props: RoomDialogProps) => {
           return /^[A-Z0-9]$/.test(input)
         }}
       />
-      <div
+      <p
         className="text-1xl mt-4 mb-8 cursor-pointer hover:pointer text-center text-blue-500"
         onClick={() => {
           navigator.clipboard
             .writeText(url.current)
             .then(() => {
-              toast.success('Room url copied to clipboard')
+              toast.success('Room url has copied to clipboard',
+                { icon: '📋', id: 'copy-room-url' })
             })
             .catch(() => {
-              toast.error('Failed to copy room url to clipboard')
+              toast.error('Failed to copy room url to clipboard',
+                { icon: '📋', id: 'copy-room-url' })
             })
         }}
       >
-        Click to paste or scan QR Code to share
-      </div>
+        Click to paste or scan QR Code to invite the others join you.
+      </p>
       <QRCode
         className="text-center mx-auto my-4 w-48 h-48"
         value={url.current}

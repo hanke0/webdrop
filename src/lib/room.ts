@@ -31,6 +31,13 @@ export const randomUser = (): string => {
   return `${prefix}-${name}`
 }
 
+export const getRoom = (uid: string): string => {
+  if (isGoodRoomAndName(uid)) {
+    return uid.split('-')[0]
+  }
+  return ''
+}
+
 export const getUserIconPath = (uid: string): string => {
   let name = ''
   if (isGoodUser(uid)) {
@@ -44,14 +51,20 @@ export const getUserIconPath = (uid: string): string => {
   return `${config.BASE_URL}icons/default.svg`
 }
 
+function _getUserShowName(prefix: string, name: string): string {
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1) + ' '
+    + name.charAt(0).toUpperCase() + name.slice(1)
+}
+
 export const getUserShowName = (uid: string): string => {
   if (isGoodUser(uid)) {
-    return uid
+    const parts = uid.split('-')
+    return _getUserShowName(parts[0], parts[1])
   }
   if (isGoodRoomAndName(uid)) {
-    const index = uid.indexOf('-')
-    if (index !== -1) {
-      return uid.substring(index + 1)
+    const parts = uid.split('-')
+    if (parts.length === 3) {
+      return _getUserShowName(parts[1], parts[2])
     }
   }
   return uid
