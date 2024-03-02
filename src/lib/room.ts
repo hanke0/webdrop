@@ -41,7 +41,7 @@ export const getUserIconPath = (uid: string): string => {
   if (name && icons.includes(name)) {
     return `${config.BASE_URL}icons/${name}.svg`
   }
-  return ''
+  return `${config.BASE_URL}icons/default.svg`
 }
 
 export const getUserShowName = (uid: string): string => {
