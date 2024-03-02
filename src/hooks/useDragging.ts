@@ -1,5 +1,4 @@
-import { RefObject } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, RefObject } from 'react'
 
 type Params = {
   labelRef: RefObject<HTMLLabelElement>

@@ -2,7 +2,7 @@ import { UserHead } from './user-head'
 import { RoomDialog } from './room-dialog'
 import { getRoom, getUserShowName } from '../lib/room'
 import toast from 'react-hot-toast'
-import React, { useRef } from 'react'
+import { useRef } from 'react'
 
 export type UserTextProps = {
   uid: string
