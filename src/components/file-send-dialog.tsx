@@ -1,6 +1,7 @@
 import { Dialog, OpenState } from './dialog'
 import { Upload } from './upload'
 import { Button } from './button'
+import { getUserShowName } from '../lib/room'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -8,12 +9,13 @@ export type FileSendDialogProps = {
   handleSendFile: (file: File) => Promise<void>
   onClose: () => void
   open: OpenState
-  user: string
+  uid: string
 }
 
 export function FileSendDialog(props: FileSendDialogProps) {
   const [file, setFile] = useState(null as File | null)
   const [sending, setSending] = useState(false)
+  const name = getUserShowName(props.uid)
 
   const handleClick = async () => {
     if (sending) {
@@ -22,17 +24,13 @@ export function FileSendDialog(props: FileSendDialogProps) {
     }
     if (file) {
       setSending(true)
-      const send = async () => {
-        try {
-          await props.handleSendFile(file)
-          toast.success('Send file success')
-          setFile(null)
-        } catch (err) {
-          toast.error(`Send file fail: ${err}`)
-        }
-        setSending(false)
+      try {
+        await props.handleSendFile(file)
+        setFile(null)
+      } catch (err) {
+        toast.error(`Send file fail: ${err}`)
       }
-      send()
+      setSending(false)
     } else {
       toast.error('No file selected')
     }
@@ -48,7 +46,7 @@ export function FileSendDialog(props: FileSendDialogProps) {
       }}
     >
       <h3 className="py-3 px-3">
-        To: {props.user}
+        To: {name}
       </h3>
       <Upload callback={(file) => setFile(file)}>
         {file && (

@@ -98,8 +98,14 @@ export default function Home() {
       toast.error('Send fail: peer is null')
       return
     }
+    const name = getUserShowName(curConn.id)
     const conn = curConn.getReal(peer)
-    await sendFile(conn, file)
+    setCurConn(null) // close dialog
+    toast.promise(sendFile(conn, file), {
+      loading: `Sending to ${name} with file ${file.name}...`,
+      success: `Success send to ${name} with file ${file.name}...`,
+      error: (err) => `Send to ${name} with file ${file.name} fail: ${err}`,
+    })
   }
 
   const handleRefreshRoomUsers = async () => {
@@ -138,7 +144,7 @@ export default function Home() {
         open={() => !!curConn}
         onClose={() => setCurConn(null)}
         handleSendFile={handleSendFile}
-        user={curConn?.id ? getUserShowName(curConn.id) : ''}
+        uid={curConn?.id || ''}
       />
       <Main>
         <Card>

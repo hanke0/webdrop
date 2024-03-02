@@ -28,7 +28,7 @@ export function UserText({ uid }: UserTextProps) {
   }
 
   return (
-    <div className="container flex flex-row">
+    <div className="container flex flex-row py-4">
       <div className="flex mx-2">
         <UserHead uid={uid} />
       </div>
