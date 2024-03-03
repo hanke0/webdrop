@@ -1,21 +1,24 @@
-import { getLocalRoom, getRoomAndUser } from '../lib/client'
+import { useSearchParams } from './useSearchParams'
+import { useCookies } from './useCookies'
 import { LazyConnection, P2P } from '../lib/p2p'
 import { isGoodRoom, isGoodUser, randomRoom, randomUser } from '../lib/room'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
-const getRoom = (rid: string) => {
+const getRoom = (search: URLSearchParams, cookies: Map<string, string>) => {
+  const rid = search.get('room')
   if (rid && isGoodRoom(rid)) {
     return rid
   }
-  const crid = getLocalRoom()
-  if (crid && isGoodRoom(crid)) {
-    return crid
+  const rid1 = cookies.get('useriproom')
+  if (rid1 && isGoodRoom(rid1)) {
+    return rid1
   }
   return randomRoom()
 }
 
-const getUser = (uid: string) => {
+const getUser = (search: URLSearchParams) => {
+  const uid = search.get('user')
   if (uid && isGoodUser(uid)) {
     return uid
   }
@@ -26,6 +29,8 @@ export function usePeer(
   addConnection: (conn: LazyConnection) => void,
   removeConnection: (conn: LazyConnection) => void
 ) {
+  const cookies = useCookies()
+  const search = useSearchParams()
   const [peer, setPeer] = useState<P2P | null>(null)
 
   useEffect(() => {
@@ -33,9 +38,8 @@ export function usePeer(
     if (peer) {
       return
     }
-    const [rid, uid] = getRoomAndUser()
-    const room = getRoom(rid)
-    const user = getUser(uid)
+    const room = getRoom(search, cookies)
+    const user = getUser(search)
 
     const newPeer = new P2P({
       room,
@@ -65,6 +69,6 @@ export function usePeer(
         setPeer(null)
       }
     }
-  }, [peer, addConnection, removeConnection])
+  }, [cookies, search, peer, addConnection, removeConnection])
   return peer
 }

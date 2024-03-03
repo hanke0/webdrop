@@ -12,7 +12,6 @@
     "serve-dev": "./scripts/serve-dev.sh"
   },
   "dependencies": {
-    "js-cookie": "^3.0.5",
     "js-file-download": "^0.4.12",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
