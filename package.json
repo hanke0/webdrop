@@ -15,7 +15,7 @@
     "js-file-download": "^0.4.12",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
-    "peerjs": "^1.5.2",
+    "peerjs": "^1.5.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
