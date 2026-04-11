@@ -60,7 +60,6 @@ export class P2P {
   }
 
   constructor(options: Options) {
-    console.log(config)
     const opt: PeerOptions = {
       debug: options.logLevel || 2, // default warning
       config: tunConfig,
@@ -143,7 +142,7 @@ export class P2P {
     }
     const maybe = user.toLowerCase().replace(' ', '-')
     if (isGoodUser(maybe)) {
-      return this.room + "-" + maybe
+      return this.room + '-' + maybe
     }
     return user
   }

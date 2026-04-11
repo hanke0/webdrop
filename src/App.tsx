@@ -10,7 +10,7 @@ import {
   LazyConnectionImpl,
   P2P,
 } from './lib/p2p'
-import { usePeer } from './hooks/userPeer'
+import { usePeer } from './hooks/usePeer'
 import { Main } from './components/main'
 import { getRoomUserListURL, sleep } from './lib/client'
 import { UserText } from './components/user-text'
@@ -20,7 +20,7 @@ import { ErrorPage } from './components/error-page'
 import { getUserShowName } from './lib/room'
 import useUsers from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
@@ -49,13 +49,25 @@ const sendFile = async (conn: Connection, file: File) => {
     return
   }
   await sender
-  console.log('sended file:', conn.id, file.name)
+  console.log('sent file:', conn.id, file.name)
 }
 
 export default function Home() {
   const [getUsers, addUser, removeUser, resetRoomUsers] = useUsers()
   const peer = usePeer(addUser, removeUser)
   const [curConn, setCurConn] = useState<LazyConnection | null>(null)
+
+  const outboundHandlers = useMemo(
+    () => ({
+      open: (conn: Connection) => addUser(conn),
+      close: (conn: Connection) => removeUser(conn),
+      error: (conn: Connection, err: Error) => {
+        toast.error(`Connection to ${conn.id} failed: ${err.message}`)
+        removeUser(conn)
+      },
+    }),
+    [addUser, removeUser]
+  )
 
   if (!peer) {
     return <LoadingPage />
@@ -74,17 +86,7 @@ export default function Home() {
       return
     }
 
-    peer.connect(
-      fullName,
-      {
-        open: (conn) => addUser(conn),
-        close: (conn) => removeUser(conn),
-        error: (conn, err) => {
-          toast.error(`connect to ${conn.id} fail: ${err.message}`)
-          removeUser(conn)
-        },
-      },
-    )
+    peer.connect(fullName, outboundHandlers)
   }
 
   const handleSendFile = async (file: File) => {
@@ -102,7 +104,7 @@ export default function Home() {
     setCurConn(null) // close dialog
     toast.promise(sendFile(conn, file), {
       loading: `Sending to ${name} with file ${file.name}...`,
-      success: `Success send to ${name} with file ${file.name}...`,
+      success: `Successfully sent ${file.name} to ${name}`,
       error: (err) => `Send to ${name} with file ${file.name} fail: ${err}`,
     })
   }
@@ -116,20 +118,13 @@ export default function Home() {
       }
       const data = await res.json() as { id: string }[]
       console.log('fetch room users:', peer.id, data)
-      const pending = data.map((ele: { id: string }) => {
-        const id = ele.id
-        const builder = (p: P2P) => {
-          return p.connect(id, {
-            open: (conn) => addUser(conn),
-            close: (conn) => removeUser(conn),
-            error: (conn, err) => {
-              toast.error(`connection with ${conn.id} fail: ${err.message}`)
-              removeUser(conn)
-            },
-          })
-        }
-        return new LazyConnectionImpl(id, builder)
-      }).filter((c) => c.id !== peer.id)
+      const pending = data
+        .map((ele: { id: string }) => {
+          const id = ele.id
+          const builder = (p: P2P) => p.connect(id, outboundHandlers)
+          return new LazyConnectionImpl(id, builder)
+        })
+        .filter((c) => c.id !== peer.id)
       resetRoomUsers(pending)
     } catch (err) {
       console.log('fetch room users fail:', err)

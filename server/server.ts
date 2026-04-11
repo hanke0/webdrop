@@ -11,14 +11,16 @@ const server = createServer(app)
 
 const getUserIPRoom = (req: IncomingMessage) => {
   let ip = ''
-  let realIP = req.headers['X-Real-IP']
-  if (!realIP) {
-    const forwarded = req.headers['x-forwarded-for']
-    realIP =
-      typeof forwarded === 'string'
-        ? forwarded.split(/, /)[0]
-        : req.socket.remoteAddress
-  }
+  const xReal = req.headers['x-real-ip']
+  const forwarded = req.headers['x-forwarded-for']
+  const fromForwarded =
+    typeof forwarded === 'string'
+      ? forwarded.split(',')[0]?.trim()
+      : undefined
+  const realIP =
+    (typeof xReal === 'string' && xReal.length > 0 ? xReal : undefined) ??
+    fromForwarded ??
+    req.socket.remoteAddress
   if (typeof realIP === 'string' && realIP.length > 0) {
     ip = realIP
   }
@@ -56,7 +58,7 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1)
   app.use(helmet())
 } else {
-  console.log('WARNING: Development mode, set NOE_ENV=production to enable security features in production.')
+  console.log('WARNING: Development mode, set NODE_ENV=production to enable security features in production.')
   app.use((_, rsp, next) => {
     rsp.header('Access-Control-Allow-Origin', '*')
     next()
@@ -121,7 +123,7 @@ function getRoom(id: string) {
 peerServer.on('connection', (client) => {
   const id = client.getId()
   console.log('connected: ', id)
-  const rid = getRoom(client.getId())
+  const rid = getRoom(id)
   if (!rid) {
     client.send({ type: 'ERROR', payload: 'Invalid room' })
     return
@@ -132,18 +134,17 @@ peerServer.on('connection', (client) => {
     console.log('room created: ', id)
     return
   }
-  const user = room.find((u) => u.id === id)
-  if (!user) {
-    room.push({ id: id })
-    console.log('user joined: ', id)
+  if (room.some((u) => u.id === id)) {
     return
   }
+  room.push({ id })
+  console.log('user joined: ', id)
 })
 
 peerServer.on('disconnect', (client) => {
   const id = client.getId()
   console.log('disconnect: ', id)
-  const rid = getRoom(client.getId())
+  const rid = getRoom(id)
   if (rid) {
     const room = rooms.get(rid)
     if (room) {

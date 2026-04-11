@@ -34,41 +34,44 @@ export function usePeer(
   const [peer, setPeer] = useState<P2P | null>(null)
 
   useEffect(() => {
-    const p = peer
-    if (peer) {
-      return
-    }
+    let cancelled = false
     const room = getRoom(search, cookies)
     const user = getUser(search)
-
-    const newPeer = new P2P({
+    const instance = new P2P({
       room,
       user,
     })
-    newPeer.onOpen(() => {
-      setPeer(newPeer)
+    instance.onOpen(() => {
+      if (!cancelled) {
+        setPeer(instance)
+      }
     })
-    newPeer.onError((err) => {
+    instance.onError((err) => {
       toast.error(`peer error: ${err.message}`)
-      setPeer(null)
+      if (!cancelled) {
+        setPeer(null)
+      }
     })
-    newPeer.onDisconnect(() => {
-      setPeer(null)
+    instance.onDisconnect(() => {
+      if (!cancelled) {
+        setPeer(null)
+      }
     })
-    newPeer.onClose(() => {
-      setPeer(null)
+    instance.onClose(() => {
+      if (!cancelled) {
+        setPeer(null)
+      }
     })
-    newPeer.onConnection({
+    instance.onConnection({
       open: addConnection,
       error: removeConnection,
       close: removeConnection,
     })
     return () => {
-      if (p && !p.ok) {
-        p.close()
-        setPeer(null)
-      }
+      cancelled = true
+      instance.close()
+      setPeer(null)
     }
-  }, [cookies, search, peer, addConnection, removeConnection])
+  }, [cookies, search, addConnection, removeConnection])
   return peer
 }
