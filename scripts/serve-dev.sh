@@ -11,23 +11,21 @@ export WEB_DROP_PEER_HOST=/
 export PORT=10234
 export NODE_ENV=development
 
-cd server
-npm run build
+npm run build -w @webdrop/server
 
 case "$1" in
 peer)
-	node server.js
+	node server/webdrop-server.cjs
 	exit 0
 	;;
 esac
 
-node server.js &
+node server/webdrop-server.cjs &
 peerpid=$!
 trap "kill $peerpid" TERM INT EXIT
-cd ..
 
 sleep 1
 nc -vz localhost 10234
 
-npm run dev
+npm run dev -w @webdrop/web
 wait

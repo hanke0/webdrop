@@ -1,13 +1,19 @@
 {
-  "name": "webdrop",
+  "name": "@webdrop/server",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "fmt": "npm run lint -- --fix",
-    "start": "NODE_ENV=production node server.js"
+    "build": "tsc && node build-bundle.mjs",
+    "build:bundle": "node build-bundle.mjs",
+    "lint": "npm run lint --prefix ..",
+    "fmt": "npm run fmt --prefix ..",
+    "start": "NODE_ENV=production node webdrop-server.cjs",
+    "dev": "tsc && node server.js"
+  },
+  "devDependencies": {
+    "@types/morgan": "^1.9.10",
+    "esbuild": "^0.25.5"
   },
   "dependencies": {
     "dotenv": "^17.4.1",

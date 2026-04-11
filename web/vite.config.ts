@@ -1,9 +1,13 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 import generateFile from 'vite-plugin-generate-file'
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), 'WEB_DROP_')
+  const env = loadEnv(mode, repoRoot, 'WEB_DROP_')
   const baseURL = env.WEB_DROP_BASE_URL || '/'
 
   const manifest = {

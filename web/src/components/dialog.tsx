@@ -8,7 +8,7 @@ type Props = {
   open?: OpenState
 }
 
-export type OpenState = boolean | (() => boolean) | RefObject<HTMLElement>
+export type OpenState = boolean | (() => boolean) | RefObject<HTMLElement | null>
 
 export function Dialog(props: Props) {
   const [isOpen, setOpen] = useState(false)

@@ -8,7 +8,7 @@ import { RefObject, useMemo } from 'react'
 
 export type RoomDialogProps = {
   room: string
-  open: RefObject<HTMLElement>
+  open: RefObject<HTMLElement | null>
   onClose?: () => void
 }
 

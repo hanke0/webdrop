@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, RefObject } from 'react'
 
 type Params = {
-  labelRef: RefObject<HTMLLabelElement>
+  labelRef: RefObject<HTMLLabelElement | null>
   onChange: (file: File) => void
 }
 

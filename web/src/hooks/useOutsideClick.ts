@@ -4,7 +4,7 @@ const MOUSE_UP = 'mouseup';
 
 export default function useOutsideClick(
   handleClose: () => void,
-  ref: React.RefObject<HTMLElement>) {
+  ref: React.RefObject<HTMLElement | null>) {
   const handleClick = useCallback((event: MouseEvent) => {
     if (!ref?.current) {
       return
