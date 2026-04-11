@@ -109,7 +109,7 @@ export default function Home() {
     return <ErrorPage err={peer.err.message} />
   }
 
-  const handleConnectToUser = (fullName: string) => {
+  const handleConnectToUser = async (fullName: string) => {
     if (!peer) {
       toast.error('Connect fail: peer is null')
       return
@@ -119,17 +119,31 @@ export default function Home() {
       return
     }
 
-    peer.connect(fullName, outboundHandlers)
+    const id = peer.getConnectID(fullName)
+    try {
+      const res = await fetch(getRoomUserListURL(peer.room))
+      if (!res.ok) {
+        toast.error('Could not load room list: ' + res.statusText)
+        return
+      }
+      const data = (await res.json()) as { id: string; addrs?: string[] }[]
+      const u = data.find((x) => x.id === id)
+      if (!u) {
+        toast.error(
+          'That user is not online in this room — refresh the user list first'
+        )
+        return
+      }
+      peer.connect(fullName, u.addrs ?? [], outboundHandlers)
+    } catch (err) {
+      toast.error(`Connect fail: ${err}`)
+    }
   }
 
   const handleSendFile = async (file: File) => {
     console.log('send file:', file.name)
     if (!curConn) {
       toast.error('Connect not selected')
-      return
-    }
-    if (!peer.peer) {
-      toast.error('Send fail: peer is null')
       return
     }
     const name = getUserShowName(curConn.id)
@@ -149,12 +163,13 @@ export default function Home() {
         toast.error('fetch room users fail: ' + res.statusText)
         return
       }
-      const data = await res.json() as { id: string }[]
+      const data = (await res.json()) as { id: string; addrs?: string[] }[]
       console.log('fetch room users:', peer.id, data)
       const pending = data
-        .map((ele: { id: string }) => {
+        .map((ele) => {
           const id = ele.id
-          const builder = (p: P2P) => p.connect(id, outboundHandlers)
+          const addrs = ele.addrs ?? []
+          const builder = (p: P2P) => p.connect(id, addrs, outboundHandlers)
           return new LazyConnectionImpl(id, builder)
         })
         .filter((c) => c.id !== peer.id)

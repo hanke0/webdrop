@@ -36,33 +36,10 @@ export function usePeer(
 
   useEffect(() => {
     let cancelled = false
+    let live: P2P | null = null
     const room = getRoom(search, cookies)
     const user = getUser(search)
-    const instance = new P2P({
-      room,
-      user,
-    })
-    instance.onOpen(() => {
-      if (!cancelled) {
-        setPeer(instance)
-      }
-    })
-    instance.onError((err) => {
-      toast.error(`peer error: ${err.message}`)
-      if (!cancelled) {
-        setPeer(null)
-      }
-    })
-    instance.onDisconnect(() => {
-      if (!cancelled) {
-        setPeer(null)
-      }
-    })
-    instance.onClose(() => {
-      if (!cancelled) {
-        setPeer(null)
-      }
-    })
+
     const inboundHandlers: ConnectionCallback = {
       open: addConnection,
       error: removeConnection,
@@ -71,12 +48,47 @@ export function usePeer(
         return fileOfferRef.current
       },
     }
-    instance.onConnection(inboundHandlers)
+
+    ;(async () => {
+      try {
+        const instance = await P2P.create({ room, user }, inboundHandlers)
+        if (cancelled) {
+          instance.close()
+          return
+        }
+        if (instance.err) {
+          toast.error(`peer error: ${instance.err.message}`)
+          setPeer(null)
+          return
+        }
+        live = instance
+        instance.onDisconnect(() => {
+          console.log('signaling disconnected:', instance.id)
+          if (!cancelled) {
+            setPeer(null)
+          }
+        })
+        instance.onClose(() => {
+          if (!cancelled) {
+            setPeer(null)
+          }
+        })
+        setPeer(instance)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        toast.error(`peer error: ${msg}`)
+        if (!cancelled) {
+          setPeer(null)
+        }
+      }
+    })()
+
     return () => {
       cancelled = true
-      instance.close()
+      live?.close()
       setPeer(null)
     }
   }, [cookies, search, addConnection, removeConnection])
+
   return peer
 }
