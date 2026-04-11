@@ -1,8 +1,8 @@
 import { useSearchParams } from './useSearchParams'
 import { useCookies } from './useCookies'
-import { LazyConnection, P2P } from '../lib/p2p'
+import { ConnectionCallback, LazyConnection, P2P } from '../lib/p2p'
 import { isGoodRoom, isGoodUser, randomRoom, randomUser } from '../lib/room'
-import { useEffect, useState } from 'react'
+import { MutableRefObject, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
 const getRoom = (search: URLSearchParams, cookies: Map<string, string>) => {
@@ -27,7 +27,8 @@ const getUser = (search: URLSearchParams) => {
 
 export function usePeer(
   addConnection: (conn: LazyConnection) => void,
-  removeConnection: (conn: LazyConnection) => void
+  removeConnection: (conn: LazyConnection) => void,
+  fileOfferRef: MutableRefObject<ConnectionCallback['fileOffer'] | undefined>
 ) {
   const cookies = useCookies()
   const search = useSearchParams()
@@ -62,11 +63,15 @@ export function usePeer(
         setPeer(null)
       }
     })
-    instance.onConnection({
+    const inboundHandlers: ConnectionCallback = {
       open: addConnection,
       error: removeConnection,
       close: removeConnection,
-    })
+      get fileOffer() {
+        return fileOfferRef.current
+      },
+    }
+    instance.onConnection(inboundHandlers)
     return () => {
       cancelled = true
       instance.close()

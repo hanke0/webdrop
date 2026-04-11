@@ -5,7 +5,6 @@ import { List } from './components/list'
 import { UserHead } from './components/user-head'
 import {
   Connection,
-  Data,
   LazyConnection,
   LazyConnectionImpl,
   P2P,
@@ -15,12 +14,16 @@ import { Main } from './components/main'
 import { getRoomUserListURL, sleep } from './lib/client'
 import { UserText } from './components/user-text'
 import { FileSendDialog } from './components/file-send-dialog'
+import {
+  FileReceiveDialog,
+  IncomingFileOffer,
+} from './components/file-receive-dialog'
 import { LoadingPage } from './components/loading-page'
 import { ErrorPage } from './components/error-page'
 import { getUserShowName } from './lib/room'
 import useUsers from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
@@ -33,28 +36,55 @@ const generateListItem = ({ id }: LazyConnection) => {
 }
 
 const sendFile = async (conn: Connection, file: File) => {
-  const blob = new Blob([file], { type: file.type })
-  const data: Data = {
-    type: 'file',
-    name: file.name,
-    payload: blob,
-  }
   console.log('sending file: ', conn.id, file.name)
   if (!conn.opened) {
     await sleep(500) // wait for connection open
   }
-  const sender = conn.send(data)
-  if (!sender) {
-    toast.error('Send file fail')
-    return
-  }
-  await sender
+  await conn.sendFileWithConsent(file)
   console.log('sent file:', conn.id, file.name)
 }
 
 export default function Home() {
   const [getUsers, addUser, removeUser, resetRoomUsers] = useUsers()
-  const peer = usePeer(addUser, removeUser)
+  const [incomingFile, setIncomingFile] = useState<IncomingFileOffer | null>(
+    null
+  )
+  const fileOfferRef = useRef<
+    | ((
+        conn: Connection,
+        meta: { transferId: string; name: string; size: number },
+        respond: (accepted: boolean) => void
+      ) => void)
+    | undefined
+  >(undefined)
+
+  const handleFileOffer = useCallback(
+    (
+      conn: Connection,
+      meta: { transferId: string; name: string; size: number },
+      respond: (accepted: boolean) => void
+    ) => {
+      setIncomingFile((prev) => {
+        if (prev) {
+          toast.error('Another file is already waiting for your response')
+          respond(false)
+          return prev
+        }
+        return {
+          transferId: meta.transferId,
+          uid: conn.id,
+          name: meta.name,
+          size: meta.size,
+          respond,
+        }
+      })
+    },
+    []
+  )
+
+  fileOfferRef.current = handleFileOffer
+
+  const peer = usePeer(addUser, removeUser, fileOfferRef)
   const [curConn, setCurConn] = useState<LazyConnection | null>(null)
 
   const outboundHandlers = useMemo(
@@ -64,6 +94,9 @@ export default function Home() {
       error: (conn: Connection, err: Error) => {
         toast.error(`Connection to ${conn.id} failed: ${err.message}`)
         removeUser(conn)
+      },
+      get fileOffer() {
+        return fileOfferRef.current
       },
     }),
     [addUser, removeUser]
@@ -134,6 +167,12 @@ export default function Home() {
 
   return (
     <>
+      <FileReceiveDialog
+        key={incomingFile?.transferId ?? 'closed'}
+        open={() => !!incomingFile}
+        offer={incomingFile}
+        onClose={() => setIncomingFile(null)}
+      />
       <FileSendDialog
         open={() => !!curConn}
         onClose={() => setCurConn(null)}

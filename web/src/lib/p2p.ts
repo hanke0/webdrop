@@ -4,11 +4,21 @@ import { DataConnection, LogLevel, Peer, PeerOptions } from 'peerjs'
 import toast from 'react-hot-toast'
 import fileDownload from 'js-file-download'
 
-export type Data = {
-  type: 'file' | 'text'
-  name: string
-  payload: string | ArrayBuffer | ArrayBufferView | Blob
-}
+/** P2P wire messages (discriminated by `type`). */
+export type WireData =
+  | { type: 'text'; name: string; payload: string }
+  | {
+      type: 'file-offer'
+      transferId: string
+      name: string
+      size: number
+    }
+  | {
+      type: 'file-offer-response'
+      transferId: string
+      accepted: boolean
+    }
+  | { type: 'file'; transferId: string; name: string; payload: Blob }
 
 export type Options = {
   room: string
@@ -159,12 +169,23 @@ export class P2P {
   }
 }
 
-type ConnectionCallback = {
-  // called when a new connection is passive established
+export type FileOfferMeta = {
+  transferId: string
+  name: string
+  size: number
+}
+
+export type ConnectionCallback = {
   knock?: (conn: Connection) => void
   open: (conn: Connection) => void
   close: (conn: Connection) => void
   error: (conn: Connection, err: Error) => void
+  /** Receiver: show consent UI; call `respond` with true to accept the file. */
+  fileOffer?: (
+    conn: Connection,
+    meta: FileOfferMeta,
+    respond: (accepted: boolean) => void
+  ) => void
 }
 
 export interface LazyConnection {
@@ -197,6 +218,14 @@ export class Connection implements LazyConnection {
   err?: Error
   closed?: boolean
   opened?: boolean
+  private pendingOfferResponses = new Map<
+    string,
+    {
+      resolve: (accepted: boolean) => void
+      promiseReject: (err: Error) => void
+      timer: ReturnType<typeof setTimeout>
+    }
+  >()
 
   get ok() {
     return !this.err && !this.closed
@@ -224,30 +253,113 @@ export class Connection implements LazyConnection {
     })
     conn.on('close', () => {
       console.log('connection close:', id)
+      this.clearPendingOffers(new Error('Connection closed'))
       this.closed = true
       this.opened = false
       callback.close(this)
     })
     conn.on('error', (err) => {
       console.log('connection error:', id, err)
+      this.clearPendingOffers(
+        err instanceof Error ? err : new Error(String(err))
+      )
       this.err = err
       this.closed = true
       this.opened = false
       callback.error(this, err)
     })
     conn.on('data', (payload) => {
-      const data = payload as Data
-      console.log('receive data:', this.id, data.type, data.name)
-      if (data.type !== 'file') {
+      const data = payload as WireData
+      console.log('receive data:', this.id, data.type, 'name' in data ? data.name : '')
+      if (data.type === 'text') {
         toast(`receive message from ${data.name}: ${data.payload}`)
         return
       }
-      toast(`receive file ${data.name}`, { icon: '📁', })
-      fileDownload(data.payload, data.name)
+      if (data.type === 'file-offer-response') {
+        const pending = this.pendingOfferResponses.get(data.transferId)
+        if (pending) {
+          clearTimeout(pending.timer)
+          this.pendingOfferResponses.delete(data.transferId)
+          pending.resolve(data.accepted)
+        }
+        return
+      }
+      if (data.type === 'file-offer') {
+        const meta: FileOfferMeta = {
+          transferId: data.transferId,
+          name: data.name,
+          size: data.size,
+        }
+        const respond = (accepted: boolean) => {
+          this.send({
+            type: 'file-offer-response',
+            transferId: data.transferId,
+            accepted,
+          })
+        }
+        callback.fileOffer?.(this, meta, respond)
+        return
+      }
+      if (data.type === 'file') {
+        toast(`receive file ${data.name}`, { icon: '📁' })
+        fileDownload(data.payload, data.name)
+        return
+      }
     })
   }
 
-  send(data: Data) {
+  private clearPendingOffers(err: Error) {
+    for (const [tid, p] of [...this.pendingOfferResponses.entries()]) {
+      clearTimeout(p.timer)
+      this.pendingOfferResponses.delete(tid)
+      p.promiseReject(err)
+    }
+  }
+
+  /**
+   * Ask the peer to accept the transfer; only sends bytes after they agree.
+   */
+  async sendFileWithConsent(file: File, timeoutMs = 300_000): Promise<void> {
+    if (!this.conn.open) {
+      toast.error(`connection to ${this.id} is not open`)
+      throw new Error('connection not open')
+    }
+    const transferId = crypto.randomUUID()
+    const accepted = await new Promise<boolean>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const p = this.pendingOfferResponses.get(transferId)
+        if (p) {
+          clearTimeout(p.timer)
+          this.pendingOfferResponses.delete(transferId)
+          p.promiseReject(new Error('Timed out waiting for receiver'))
+        }
+      }, timeoutMs)
+      this.pendingOfferResponses.set(transferId, {
+        resolve,
+        promiseReject: reject,
+        timer,
+      })
+      this.conn.send({
+        type: 'file-offer',
+        transferId,
+        name: file.name,
+        size: file.size,
+      })
+    })
+    if (!accepted) {
+      throw new Error('Receiver declined the transfer')
+    }
+    const blob = new Blob([file], { type: file.type })
+    const msg: WireData = {
+      type: 'file',
+      transferId,
+      name: file.name,
+      payload: blob,
+    }
+    await this.conn.send(msg)
+  }
+
+  send(data: WireData) {
     if (!this.conn.open) {
       toast.error(`connection to ${this.id} is not open`)
       console.log('send data to not opened connection:', this.id)
@@ -258,6 +370,7 @@ export class Connection implements LazyConnection {
   }
 
   close() {
+    this.clearPendingOffers(new Error('Connection closed'))
     this.conn.close()
     this.closed = true
     this.opened = false
