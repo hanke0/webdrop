@@ -4,7 +4,7 @@ import { getRoomURL } from '../lib/client'
 import { isGoodRoom } from '../lib/room'
 import QRCode from 'react-qr-code'
 import { toast } from 'react-hot-toast'
-import { RefObject, useRef } from 'react'
+import { RefObject, useMemo } from 'react'
 
 export type RoomDialogProps = {
   room: string
@@ -20,7 +20,10 @@ export const RoomDialog = (props: RoomDialogProps) => {
     }
     window.location.replace(getRoomURL(code))
   }
-  const url = useRef(getRoomURL(props.room).toString())
+  const roomUrl = useMemo(
+    () => getRoomURL(props.room).toString(),
+    [props.room]
+  )
 
   return (
     <Dialog open={props.open} onClose={props.onClose} >
@@ -38,7 +41,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
         className="text-1xl mt-4 mb-8 cursor-pointer hover:pointer text-center text-blue-500"
         onClick={() => {
           navigator.clipboard
-            .writeText(url.current)
+            .writeText(roomUrl)
             .then(() => {
               toast.success('Room url has copied to clipboard',
                 { icon: '📋', id: 'copy-room-url' })
@@ -53,7 +56,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
       </p>
       <QRCode
         className="text-center mx-auto my-4 w-48 h-48"
-        value={url.current}
+        value={roomUrl}
       />
     </Dialog>
   )

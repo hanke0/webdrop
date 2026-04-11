@@ -65,8 +65,8 @@ export class P2P {
       debug: options.logLevel || 2, // default warning
       config: tunConfig,
     }
-    config.PEER_HOSTNAME && (opt.host = config.PEER_HOSTNAME)
-    config.PEER_PORT && (opt.port = config.PEER_PORT)
+    if (config.PEER_HOSTNAME) opt.host = config.PEER_HOSTNAME
+    if (config.PEER_PORT) opt.port = config.PEER_PORT
     if (opt.host && !config.PEER_PORT) {
       if (window.location.port) {
         opt.port = parseInt(window.location.port)
@@ -74,7 +74,7 @@ export class P2P {
         opt.port = window.location.protocol === 'https:' ? 443 : 80
       }
     }
-    config.PEER_PATH && (opt.path = config.PEER_PATH)
+    if (config.PEER_PATH) opt.path = config.PEER_PATH
 
     const id = `${options.room}-${options.user}`
     console.log(
