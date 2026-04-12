@@ -1,6 +1,7 @@
 import useEscClose from '../hooks/useEscClose'
 import useOutsideClick from '../hooks/useOutsideClick'
 import { RefObject, useCallback, useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 type Props = {
   onClose?: () => void
@@ -10,10 +11,16 @@ type Props = {
 
 export type OpenState = boolean | (() => boolean) | RefObject<HTMLElement | null>
 
+function isRefOpenTarget(
+  open: OpenState | undefined
+): open is RefObject<HTMLElement | null> {
+  return typeof open === 'object' && open !== null && 'current' in open
+}
+
 export function Dialog(props: Props) {
   const [isOpen, setOpen] = useState(false)
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   const click = useCallback(() => {
     setOpen(true)
@@ -31,15 +38,13 @@ export function Dialog(props: Props) {
 
   useEffect(() => {
     let set = false
-    if (typeof props.open === 'object') {
+    if (isRefOpenTarget(props.open)) {
       props.open.current?.addEventListener('click', click)
       set = true
     }
     return () => {
-      if (set) {
-        if (typeof props.open === 'object') {
-          props.open.current?.removeEventListener('click', click)
-        }
+      if (set && isRefOpenTarget(props.open)) {
+        props.open.current?.removeEventListener('click', click)
       }
     }
   }, [props.open, click])
@@ -59,20 +64,28 @@ export function Dialog(props: Props) {
     return <></>
   }
 
-  return (
+  const modal = (
     <div
-      className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full bg-black bg-opacity-80`}
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4 overflow-y-auto overflow-x-hidden"
+      role="presentation"
     >
-      <div className="relative px-4 pb-4 pt-12 w-full max-w-md max-h-full m-auto" ref={dialogRef}>
-        <div className="relative bg-white rounded-lg shadow shadow-black">
+      <div
+        className="absolute inset-0 wd-modal-backdrop bg-slate-900/35 backdrop-blur-md"
+        aria-hidden
+      />
+      <div
+        className="relative z-10 w-full max-w-md max-h-[min(90dvh,720px)] sm:max-h-[min(85dvh,640px)] px-0 sm:px-0 pb-[env(safe-area-inset-bottom)]"
+        ref={dialogRef}
+      >
+        <div className="wd-modal-panel rounded-t-[1.75rem] sm:rounded-2xl bg-[var(--wd-panel)] border border-[var(--wd-border)] shadow-[0_25px_50px_-12px_rgba(15,23,42,0.12)] overflow-hidden">
           <button
             ref={closeRef}
             onClick={onClose}
             type="button"
-            className="absolute top-3 end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
+            className="absolute top-3.5 end-3 z-20 text-[var(--wd-muted)] hover:text-[var(--wd-text)] hover:bg-[var(--wd-surface-hover)] rounded-xl text-sm w-9 h-9 inline-flex justify-center items-center transition-colors duration-200"
           >
             <svg
-              className="w-3 h-3"
+              className="w-4 h-4"
               aria-hidden="true"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -86,9 +99,17 @@ export function Dialog(props: Props) {
               />
             </svg>
           </button>
-          <div className="p-4 md:p-5 text-center">{props.children}</div>
+          <div className="p-5 sm:p-6 pt-14 text-left text-[var(--wd-text)]">
+            {props.children}
+          </div>
         </div>
       </div>
     </div>
   )
+
+  if (typeof document === 'undefined') {
+    return <></>
+  }
+
+  return createPortal(modal, document.body)
 }

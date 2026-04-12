@@ -45,21 +45,21 @@ export function FileSendDialog(props: FileSendDialogProps) {
         props.onClose()
       }}
     >
-      <h3 className="py-3 px-3">
-        To: {name}
+      <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
+        发送给 {name}
       </h3>
       <Upload callback={(file) => setFile(file)}>
         {file && (
-          <>
-            <span className="text-blue-400">{file.name}</span>
-          </>
+          <span className="text-[var(--wd-accent)] font-medium">{file.name}</span>
         )}
       </Upload>
       <Button
+        variant="primary"
+        className="w-full mt-4"
         handleClick={handleClick}
-        cancelContent={{ txt: 'Cancel', state: sending }}
+        cancelContent={{ txt: '发送中…', state: sending }}
       >
-        Send
+        发送
       </Button>
     </Dialog>
   )

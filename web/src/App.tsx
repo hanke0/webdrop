@@ -37,9 +37,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
   return (
-    <div className="cursor-pointer max-w-24 transition ease-in-out delay-150 hover:-translate-y-1 hover:scale-110">
-      <UserHead uid={id} />
-      <p className="text-gray-700 text-center text-xs">{name}</p>
+    <div className="wd-peer-tile cursor-pointer flex flex-col items-center gap-2 rounded-2xl p-3 bg-[var(--wd-tile-bg)] border border-[var(--wd-border)] min-w-[5.75rem] max-w-[7rem]">
+      <UserHead uid={id} size="sm" />
+      <p className="text-[var(--wd-muted)] text-center text-xs font-medium leading-snug line-clamp-2 break-all">
+        {name}
+      </p>
     </div>
   )
 }
@@ -64,6 +66,7 @@ export default function Home() {
   const [peerUi, setPeerUi] = useState<PeerDialogState>(null)
   const [chatLines, setChatLines] = useState<Record<string, ChatLine[]>>({})
   const chatLoadDismissedRef = useRef(false)
+  const [listRefreshBusy, setListRefreshBusy] = useState(false)
 
   const incomingFileRef = useRef(incomingFile)
   const incomingChatRef = useRef(incomingChat)
@@ -282,6 +285,7 @@ export default function Home() {
   }
 
   const handleRefreshRoomUsers = async () => {
+    setListRefreshBusy(true)
     try {
       const data = await fetchRoomUsers(peer.room)
       console.log('fetch room users:', peer.id, data)
@@ -296,6 +300,8 @@ export default function Home() {
       resetRoomUsers(pending)
     } catch (err) {
       console.log('fetch room users fail:', err)
+    } finally {
+      window.setTimeout(() => setListRefreshBusy(false), 400)
     }
   }
 
@@ -342,47 +348,84 @@ export default function Home() {
         onSendChat={handleSendChat}
       />
       <Main>
-        <Card>
-          <h1 className="text-4xl font-bold text-center px-2 py-8 divide-y w-full">Web Drop</h1>
-          <div className="h-full items-center justify-center">
-            <div className="mb-4">
-              <UserText uid={peer.id} />
-            </div>
-            <Card className="h-full min-h-48">
-              <div className="container flex py-2">
-                <div className="grow w-full py-2">
-                  {getUsers().length} Users
-                  <Fresh
-                    width={16}
-                    height={16}
-                    className="mb-1 mx-2 fill-current inline hover:fill-cyan-700 cursor-pointer"
-                    onClick={handleRefreshRoomUsers}
-                  />
-                </div>
-                <div className="w-96">
-                  <InputBox
-                    placeholder="Your friend's name"
-                    buttonText="Invite"
-                    onSubmit={(id) => handleConnectToUser(id)}
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
+        <div className="wd-stagger flex w-full flex-col gap-4">
+          <header className="text-center space-y-1 px-1">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--wd-muted)] font-semibold">
+              点对点 · 安全直连
+            </p>
+            <h1 className="text-[1.75rem] sm:text-[2rem] font-semibold tracking-tight text-[var(--wd-text)]">
+              Web Drop
+            </h1>
+          </header>
 
-              <List
-                className="flex flex-row flex-wrap justify-center py-4"
-                items={getUsers()}
-                itemClassName="px-4 block"
-                getKey={(item) => item.id}
-                selectCallback={(item) =>
-                  setPeerUi({ kind: 'menu', lazy: item })
-                }
-                genContent={generateListItem}
+          <Card>
+            <UserText uid={peer.id} />
+          </Card>
+
+          <Card className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="text-left">
+                <p className="text-xs font-medium text-[var(--wd-muted)]">
+                  在线成员
+                </p>
+                <p className="mt-0.5 flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold tabular-nums text-[var(--wd-text)]">
+                    {getUsers().length}
+                  </span>
+                  <span className="text-sm text-[var(--wd-muted)]">人</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="刷新在线列表"
+                disabled={listRefreshBusy}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wd-border)] bg-[var(--wd-surface)] text-[var(--wd-accent)] hover:bg-[var(--wd-surface-hover)] transition-all duration-200 active:scale-95 disabled:opacity-50"
+                onClick={() => void handleRefreshRoomUsers()}
+              >
+                <Fresh
+                  width={18}
+                  height={18}
+                  className="pointer-events-none shrink-0"
+                  busy={listRefreshBusy}
+                />
+              </button>
+            </div>
+
+            <div className="text-left">
+              <p className="text-xs text-[var(--wd-muted)] mb-2 font-medium">
+                按显示名连接对方
+              </p>
+              <InputBox
+                placeholder="对方在房间里的名字"
+                buttonText="连接"
+                onSubmit={(id) => handleConnectToUser(id)}
+                autoComplete="off"
               />
-            </Card>
-          </div>
-          <div className="h-8" />
-        </Card>
+            </div>
+
+            <div className="rounded-xl border border-[var(--wd-border)] bg-[var(--wd-surface-muted)] p-3 min-h-[7rem]">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--wd-muted)] font-semibold mb-3 px-1 text-left">
+                点击头像 · 发文件或聊天
+              </p>
+              {getUsers().length === 0 ? (
+                <p className="text-center text-sm text-[var(--wd-muted)] py-8 px-2 leading-relaxed">
+                  还没有其他成员。可先点右上角刷新，或分享房间码邀请对方加入。
+                </p>
+              ) : (
+                <List
+                  className="flex flex-row flex-wrap justify-center gap-3 py-1"
+                  items={getUsers()}
+                  itemClassName="list-none"
+                  getKey={(item) => item.id}
+                  selectCallback={(item) =>
+                    setPeerUi({ kind: 'menu', lazy: item })
+                  }
+                  genContent={generateListItem}
+                />
+              )}
+            </div>
+          </Card>
+        </div>
       </Main>
     </>
   )

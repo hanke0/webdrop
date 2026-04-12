@@ -91,10 +91,16 @@ export function PeerDialog(props: PeerDialogProps) {
     <Dialog open={props.open} onClose={handleDialogClose}>
       {state.kind === 'menu' && (
         <>
-          <h3 className="py-3 px-1 text-lg font-semibold">与 {name}</h3>
-          <p className="text-gray-500 text-sm pb-3">选择要进行的操作</p>
+          <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
+            与 {name}
+          </h3>
+          <p className="text-sm text-[var(--wd-muted)] pb-4 pt-1">
+            选择一项操作
+          </p>
           <div className="flex flex-col gap-2">
             <Button
+              variant="primary"
+              className="w-full"
               handleClick={() =>
                 onStateChange({ kind: 'file', lazy: state.lazy })
               }
@@ -102,6 +108,8 @@ export function PeerDialog(props: PeerDialogProps) {
               发送文件
             </Button>
             <Button
+              variant="secondary"
+              className="w-full"
               handleClick={() => {
                 void onStartChat(state.lazy)
               }}
@@ -114,20 +122,31 @@ export function PeerDialog(props: PeerDialogProps) {
 
       {state.kind === 'file' && (
         <>
-          <h3 className="py-3 px-3">发送给 {name}</h3>
+          <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
+            发送给 {name}
+          </h3>
+          <p className="text-xs text-[var(--wd-muted)] pt-1 pb-3">
+            选择本地文件，对方确认后开始传输
+          </p>
           <Upload callback={(f) => setFile(f)}>
             {file && (
-              <span className="text-blue-400 break-all">{file.name}</span>
+              <span className="text-[var(--wd-accent)] break-all font-medium">
+                {file.name}
+              </span>
             )}
           </Upload>
-          <div className="flex flex-col gap-2 mt-2">
+          <div className="flex flex-col gap-2 mt-4">
             <Button
+              variant="primary"
+              className="w-full"
               handleClick={handleSendFileClick}
               cancelContent={{ txt: '发送中…', state: sendingFile }}
             >
               发送
             </Button>
             <Button
+              variant="ghost"
+              className="w-full"
               handleClick={() =>
                 onStateChange({ kind: 'menu', lazy: state.lazy })
               }
@@ -139,26 +158,32 @@ export function PeerDialog(props: PeerDialogProps) {
       )}
 
       {state.kind === 'chat-loading' && (
-        <div className="py-8 flex flex-col items-center gap-3 text-gray-600">
-          <LoadingIcon className="w-8 h-8" />
-          <p>正在等待 {name} 接受文字聊天…</p>
+        <div className="py-10 flex flex-col items-center gap-4 text-[var(--wd-muted)]">
+          <LoadingIcon className="w-9 h-9" />
+          <p className="text-sm text-center leading-relaxed">
+            正在等待 {name} 接受聊天邀请…
+          </p>
         </div>
       )}
 
       {state.kind === 'chat' && (
         <>
-          <h3 className="py-2 text-lg font-semibold text-left">与 {name} 聊天</h3>
-          <div className="h-56 overflow-y-auto text-left border border-gray-200 rounded-lg p-2 mb-2 bg-gray-50">
+          <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
+            与 {name} 聊天
+          </h3>
+          <div className="h-56 overflow-y-auto text-left border border-[var(--wd-border)] rounded-xl p-3 mb-3 bg-[var(--wd-input-bg)] mt-2">
             {lines.length === 0 && (
-              <p className="text-gray-400 text-sm">暂无消息，开始输入吧。</p>
+              <p className="text-[var(--wd-muted)] text-sm">
+                暂无消息，在下方输入开始对话。
+              </p>
             )}
             {lines.map((line) => (
               <div
                 key={line.id}
-                className={`py-1 px-2 rounded-md text-sm mb-1 max-w-[90%] break-words ${
+                className={`py-2 px-3 rounded-xl text-sm mb-2 max-w-[92%] break-words transition-opacity duration-200 ${
                   line.self
-                    ? 'ml-auto bg-cyan-100 text-gray-900'
-                    : 'mr-auto bg-white border border-gray-200 text-gray-800'
+                    ? 'ml-auto bg-[color-mix(in_oklab,var(--wd-accent)_22%,transparent)] text-[var(--wd-text)] border border-[color-mix(in_oklab,var(--wd-accent)_35%,transparent)]'
+                    : 'mr-auto bg-[var(--wd-surface)] border border-[var(--wd-border)] text-[var(--wd-text)]'
                 }`}
               >
                 {line.text}
@@ -167,7 +192,7 @@ export function PeerDialog(props: PeerDialogProps) {
             <div ref={listEndRef} />
           </div>
           <form
-            className="flex gap-2 items-end"
+            className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end"
             onSubmit={(e) => {
               e.preventDefault()
               const t = draft.trim()
@@ -179,8 +204,8 @@ export function PeerDialog(props: PeerDialogProps) {
             }}
           >
             <textarea
-              className="flex-1 min-h-[4rem] p-2 text-sm text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500 resize-y"
-              placeholder="输入消息，Enter 发送"
+              className="flex-1 min-h-[4.5rem] p-3 text-sm text-[var(--wd-text)] placeholder:text-[var(--wd-faint)] bg-[var(--wd-input-bg)] border border-[var(--wd-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--wd-accent-glow)] focus:border-[color-mix(in_oklab,var(--wd-accent)_45%,var(--wd-border))] resize-y transition-[box-shadow,border-color] duration-200"
+              placeholder="输入消息，Enter 发送 · Shift+Enter 换行"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -194,7 +219,9 @@ export function PeerDialog(props: PeerDialogProps) {
                 }
               }}
             />
-            <Button type="submit">发送</Button>
+            <Button type="submit" variant="primary" className="sm:w-auto w-full shrink-0">
+              发送
+            </Button>
           </form>
         </>
       )}

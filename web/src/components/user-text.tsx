@@ -9,48 +9,47 @@ export type UserTextProps = {
 }
 
 export function UserText({ uid }: UserTextProps) {
-  const roomDialogOpenRef = useRef<HTMLAnchorElement>(null)
+  const roomDialogOpenRef = useRef<HTMLButtonElement>(null)
   const name = getUserShowName(uid)
   const room = getRoom(uid)
   const copyUser = () => {
     navigator?.clipboard
       ?.writeText(uid)
       .then(() => {
-        toast.success(
-          'Username has copied to clipboard',
-          { icon: '📋', id: "copy-username" }
-        )
+        toast.success('已复制完整用户名', { icon: '📋', id: 'copy-username' })
       })
       .catch((err) => {
-        toast.error('copy username fail', { icon: '📋', id: "copy-username" })
+        toast.error('复制失败', { icon: '📋', id: 'copy-username' })
         console.error('copy username fail:', err)
       })
   }
 
   return (
-    <div className="container flex flex-row py-4">
-      <div className="flex mx-2">
-        <UserHead uid={uid} />
-      </div>
-      <div className="flex mx-2">
-        <div className="container flex flex-col">
-          <div className="text-gray-800">Hi</div>
-          <div className="flex font-bold text-2xl text-gray-600 hover:text-gray-800 cursor-pointer"
-            onClick={copyUser}
-          >{name}
-          </div>
-          <div className="flex text-gray-300">
-            <span>Anyone in the room</span>
-            <a className="flex text-gray-400 cursor-pointer px-1 hover:text-gray-700"
-              ref={roomDialogOpenRef}
-            >
-              {room}
-            </a>
-            <span>can send file to you</span>
-          </div>
-        </div>
+    <div className="flex flex-row gap-4 items-center">
+      <UserHead uid={uid} />
+      <div className="flex flex-col gap-1.5 min-w-0 flex-1 text-left">
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--wd-muted)]">
+          当前身份
+        </span>
+        <button
+          type="button"
+          onClick={copyUser}
+          className="text-left text-xl font-semibold tracking-tight text-[var(--wd-text)] hover:text-[var(--wd-accent-bright)] transition-colors duration-200 truncate"
+        >
+          {name}
+        </button>
+        <p className="text-sm text-[var(--wd-muted)] leading-relaxed">
+          同房间的人可以向你发文件。房间码{' '}
+          <button
+            type="button"
+            className="font-mono text-[var(--wd-accent)] hover:text-[var(--wd-accent-bright)] underline-offset-2 hover:underline transition-colors"
+            ref={roomDialogOpenRef}
+          >
+            {room}
+          </button>
+        </p>
       </div>
       <RoomDialog room={room} open={roomDialogOpenRef} />
-    </div >
+    </div>
   )
 }

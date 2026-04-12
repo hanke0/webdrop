@@ -17,6 +17,9 @@ export type CodeBoxProps = {
   onFull?: (code: string) => void
 }
 
+const cellClass =
+  'inline-block w-10 h-11 m-1 border border-[var(--wd-border-strong)] rounded-lg text-center text-lg font-semibold text-[var(--wd-text)] bg-[var(--wd-input-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--wd-accent-glow)] focus:border-[var(--wd-accent)] transition-[border-color,box-shadow] duration-200'
+
 export function CodeBox(props: CodeBoxProps) {
   const [code, setCode] = useState(new Array(props.length).fill(''))
   const doms = useRef(new Array(props.length).fill(null))
@@ -148,7 +151,7 @@ export function CodeBox(props: CodeBoxProps) {
       <input
         key={`${id}-${i}`}
         autoFocus={i == 0}
-        className="inline-block w-10 h-10 m-1 border-2 border-gray-300 rounded-md text-center focus:outline-none focus:border-blue-500"
+        className={cellClass}
         type={inputType}
         maxLength={1}
         autoComplete={i === 0 ? 'one-time-code' : 'off'}

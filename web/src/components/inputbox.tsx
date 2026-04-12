@@ -20,7 +20,7 @@ export function InputBox(props: UploadProps) {
       <div className="relative">
         <input
           type={props.type ? props.type : 'text'}
-          className="block w-full p-2 ps-4 text-sm text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+          className="block w-full py-3 ps-4 pe-[5.5rem] text-sm text-[var(--wd-text)] placeholder:text-[var(--wd-faint)] bg-[var(--wd-input-bg)] border border-[var(--wd-border)] rounded-xl focus:outline-none focus:border-[color-mix(in_oklab,var(--wd-accent)_55%,var(--wd-border))] focus:ring-2 focus:ring-[var(--wd-accent-glow)] transition-[border-color,box-shadow] duration-200"
           placeholder={props.placeholder}
           name="input"
           required
@@ -28,7 +28,7 @@ export function InputBox(props: UploadProps) {
         />
         <button
           type="submit"
-          className="absolute end-2.5 bottom-1 text-gray-600 bg-gray-100 font-medium rounded-lg text-sm px-2 py-1 hover:fill-cyan-700 hover:bg-gray-200"
+          className="absolute end-2 top-1/2 -translate-y-1/2 rounded-lg bg-[var(--wd-accent)] text-[var(--wd-on-accent)] font-semibold text-xs px-3 py-2 hover:bg-[var(--wd-accent-bright)] active:scale-95 transition-[transform,background-color] duration-200"
         >
           {props.buttonText}
         </button>

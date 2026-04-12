@@ -46,24 +46,34 @@ export function FileReceiveDialog(props: FileReceiveDialogProps) {
 
   return (
     <Dialog open={props.open} onClose={() => finish(false)}>
-      <h3 className="py-2 px-1 text-lg font-semibold">Incoming file</h3>
+      <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
+        收到文件
+      </h3>
       {offer && (
         <>
-          <p className="text-gray-600 text-sm py-1">From: {from}</p>
-          <p className="text-gray-800 py-2 break-all">
-            <span className="text-blue-600">{offer.name}</span>
-            <span className="text-gray-500 text-sm block mt-1">
+          <p className="text-sm text-[var(--wd-muted)] py-2">
+            来自 <span className="text-[var(--wd-text)]">{from}</span>
+          </p>
+          <p className="text-[var(--wd-text)] py-2 break-all text-left">
+            <span className="text-[var(--wd-accent)] font-medium">
+              {offer.name}
+            </span>
+            <span className="text-[var(--wd-muted)] text-sm block mt-2">
               {formatBytes(offer.size)}
             </span>
           </p>
-          <p className="text-gray-500 text-xs py-2">
-            Accept to download this file to your device.
+          <p className="text-xs text-[var(--wd-muted)] py-2 leading-relaxed">
+            接受后文件将下载到你的设备。
           </p>
         </>
       )}
-      <div className="flex flex-col gap-2 pt-2">
-        <Button handleClick={() => finish(true)}>Accept</Button>
-        <Button handleClick={() => finish(false)}>Decline</Button>
+      <div className="flex flex-col gap-2 pt-3">
+        <Button variant="primary" className="w-full" handleClick={() => finish(true)}>
+          接受
+        </Button>
+        <Button variant="ghost" className="w-full" handleClick={() => finish(false)}>
+          拒绝
+        </Button>
       </div>
     </Dialog>
   )

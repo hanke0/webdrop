@@ -1,19 +1,166 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 255, 255, 255;
+  color-scheme: light;
+  --wd-bg-deep: #f1f5f9;
+  --wd-bg-mid: #ffffff;
+  --wd-surface: #ffffff;
+  --wd-surface-hover: #f1f5f9;
+  --wd-surface-muted: #f8fafc;
+  --wd-input-bg: rgba(15, 23, 42, 0.04);
+  --wd-tile-bg: rgba(15, 23, 42, 0.035);
+  --wd-border: rgba(15, 23, 42, 0.1);
+  --wd-border-strong: rgba(15, 23, 42, 0.14);
+  --wd-text: #0f172a;
+  --wd-muted: #64748b;
+  --wd-faint: rgba(15, 23, 42, 0.45);
+  --wd-accent: #0d9488;
+  --wd-accent-bright: #14b8a6;
+  --wd-on-accent: #ffffff;
+  --wd-accent-glow: rgba(13, 148, 136, 0.25);
+  --wd-danger: #dc2626;
+  --wd-panel: #ffffff;
+  --wd-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --wd-ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes wd-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    /* `none` avoids a transform-containing-block so `position:fixed` descendants behave */
+    transform: none;
+  }
+}
+
+@keyframes wd-modal-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wd-modal-panel {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wd-modal-panel-sm {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wd-stagger > * {
+  animation: wd-fade-up 0.5s var(--wd-ease-out) both;
+}
+
+.wd-stagger > *:nth-child(1) {
+  animation-delay: 0.03s;
+}
+.wd-stagger > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.wd-stagger > *:nth-child(3) {
+  animation-delay: 0.13s;
+}
+.wd-stagger > *:nth-child(4) {
+  animation-delay: 0.18s;
+}
+.wd-stagger > *:nth-child(5) {
+  animation-delay: 0.23s;
+}
+
+.wd-modal-backdrop {
+  animation: wd-modal-backdrop 0.28s var(--wd-ease-out) both;
+}
+
+.wd-modal-panel {
+  animation: wd-modal-panel 0.38s var(--wd-ease-spring) both;
+}
+
+@media (max-width: 639px) {
+  .wd-modal-panel {
+    animation: wd-modal-panel-sm 0.42s var(--wd-ease-spring) both;
+  }
+}
+
+.wd-surface-card {
+  background: var(--wd-surface);
+  border: 1px solid var(--wd-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+    0 4px 6px -1px rgba(15, 23, 42, 0.06),
+    0 16px 32px -8px rgba(15, 23, 42, 0.08);
+}
+
+.wd-peer-tile {
+  transition:
+    transform 0.22s var(--wd-ease-out),
+    box-shadow 0.22s var(--wd-ease-out),
+    background-color 0.22s ease;
+}
+
+.wd-peer-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -8px var(--wd-accent-glow);
+}
+
+.wd-peer-tile:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  color: var(--wd-text);
+  background-color: var(--wd-bg-deep);
+  background-image:
+    radial-gradient(
+      ellipse 120% 80% at 50% -35%,
+      rgba(13, 148, 136, 0.09),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 100% 15%,
+      rgba(56, 189, 248, 0.05),
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 55% 45% at 0% 85%,
+      rgba(148, 163, 184, 0.12),
+      transparent 50%
+    ),
+    linear-gradient(180deg, var(--wd-bg-mid) 0%, var(--wd-bg-deep) 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100dvh;
 }
 
 @layer utilities {

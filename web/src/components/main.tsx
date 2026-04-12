@@ -7,7 +7,11 @@ type MainProps = {
 export function Main(props: MainProps) {
   return (
     <main
-      className={`fond-sans min-h-screen m-auto items-center justify-between px-4 py-4 lg:py-16 lg:px-32 max-w-[900px]`}
+      className="font-sans min-h-dvh w-full max-w-lg mx-auto flex flex-col justify-center px-4 py-6 sm:py-10"
+      style={{
+        paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
+        paddingTop: 'max(1.5rem, env(safe-area-inset-top))',
+      }}
     >
       {props.children}
     </main>

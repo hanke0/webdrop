@@ -13,7 +13,7 @@ export function LoadingIcon(props: LoadingIconProps) {
     >
       <svg
         aria-hidden="true"
-        className={`${props.className} text-gray-200 animate-spin fill-blue-600`}
+        className={`${props.className} text-[var(--wd-border-strong)] animate-spin fill-[var(--wd-accent)]`}
         viewBox="0 0 100 101"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"

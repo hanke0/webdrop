@@ -10,12 +10,12 @@ type Props = {
 
 export function Link(props: Props) {
   const defaultClass =
-    'cursor-pointer text-blue-500 hover:text-blue-700 hover:pointer'
+    'cursor-pointer text-[var(--wd-accent)] hover:text-[var(--wd-accent-bright)] underline-offset-2 hover:underline transition-colors duration-200'
   return (
     <a
       onClick={props.onClick}
       href={props.href}
-      className={`${props.className} ${props.noDefaultClass ? '' : defaultClass}`}
+      className={`${props.className ?? ''} ${props.noDefaultClass ? '' : defaultClass}`}
     >
       {props.children}
     </a>
