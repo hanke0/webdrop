@@ -11,7 +11,8 @@ import {
 } from './lib/p2p'
 import { usePeer } from './hooks/usePeer'
 import { Main } from './components/main'
-import { getRoomUserListURL, sleep } from './lib/client'
+import { fetchRoomUsers } from './lib/api'
+import { sleep } from './lib/util'
 import { UserText } from './components/user-text'
 import { FileSendDialog } from './components/file-send-dialog'
 import {
@@ -121,12 +122,7 @@ export default function Home() {
 
     const id = peer.getConnectID(fullName)
     try {
-      const res = await fetch(getRoomUserListURL(peer.room))
-      if (!res.ok) {
-        toast.error('Could not load room list: ' + res.statusText)
-        return
-      }
-      const data = (await res.json()) as { id: string; addrs?: string[] }[]
+      const data = await fetchRoomUsers(peer.room)
       const u = data.find((x) => x.id === id)
       if (!u) {
         toast.error(
@@ -158,12 +154,7 @@ export default function Home() {
 
   const handleRefreshRoomUsers = async () => {
     try {
-      const res = await fetch(getRoomUserListURL(peer.room))
-      if (!res.ok) {
-        toast.error('fetch room users fail: ' + res.statusText)
-        return
-      }
-      const data = (await res.json()) as { id: string; addrs?: string[] }[]
+      const data = await fetchRoomUsers(peer.room)
       console.log('fetch room users:', peer.id, data)
       const pending = data
         .map((ele) => {

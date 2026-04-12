@@ -1,5 +1,5 @@
 import { icons, prefixes } from './names'
-import { getDefaultRoomURL } from './client'
+import { fetchDefaultRoom } from './api'
 import { sample, sampleSize } from 'lodash'
 
 const roomRE = /^[A-Z0-9]{6}$/
@@ -62,13 +62,10 @@ export async function resolveSessionRoom(
     return stored
   }
   try {
-    const res = await fetch(getDefaultRoomURL())
-    if (res.ok) {
-      const data = (await res.json()) as { room?: string }
-      if (data.room && isGoodRoom(data.room)) {
-        storageSet(SESSION_ROOM_STORAGE_KEY, data.room)
-        return data.room
-      }
+    const data = await fetchDefaultRoom()
+    if (data && isGoodRoom(data.room)) {
+      storageSet(SESSION_ROOM_STORAGE_KEY, data.room)
+      return data.room
     }
   } catch {
     /* offline / blocked */
@@ -104,6 +101,13 @@ export const randomUser = (): string => {
   const name = sample(icons)
   if (!name) throw new Error('name is undefined')
   return `${prefix}-${name}`
+}
+
+/** Current origin with `?room=` (share link only; does not call the API). */
+export function getRoomURL(room: string): string {
+  const url = new URL(window.location.href)
+  url.searchParams.set('room', room)
+  return url.toString()
 }
 
 export const getRoom = (uid: string): string => {

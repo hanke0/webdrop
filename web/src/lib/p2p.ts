@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import fileDownload from 'js-file-download'
 import { concat } from 'uint8arrays/concat'
 import { fromString, toString } from 'uint8arrays'
-import { getRoomPresenceURL, getSignalWebSocketURL } from './client'
+import { connectSignalingWebSocket, postRoomPresence } from './api'
 
 const FRAME_JSON = 0
 const FRAME_BIN = 1
@@ -192,8 +192,7 @@ export class P2P {
     const instance = new P2P(logicalId)
     instance.inboundCallback = inboundCallback
     try {
-      const url = getSignalWebSocketURL(options.room, logicalId)
-      const ws = new WebSocket(url)
+      const ws = connectSignalingWebSocket(options.room, logicalId)
       instance.ws = ws
       await new Promise<void>((resolve, reject) => {
         ws.onopen = () => resolve()
@@ -431,18 +430,7 @@ export class P2P {
     if (this.closed) {
       return
     }
-    try {
-      const res = await fetch(getRoomPresenceURL(this.room), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logicalId: this.id, addrs: [] }),
-      })
-      if (!res.ok) {
-        console.warn('presence POST failed:', res.status)
-      }
-    } catch (e) {
-      console.warn('presence POST error:', e)
-    }
+    await postRoomPresence(this.room, this.id, [])
   }
 
   close() {

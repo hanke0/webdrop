@@ -1,7 +1,6 @@
 import { CodeBox } from './codebox'
 import { Dialog } from './dialog'
-import { getRoomURL } from '../lib/client'
-import { isGoodRoom } from '../lib/room'
+import { getRoomURL, isGoodRoom } from '../lib/room'
 import QRCode from 'react-qr-code'
 import { toast } from 'react-hot-toast'
 import { RefObject, useMemo } from 'react'
@@ -20,10 +19,7 @@ export const RoomDialog = (props: RoomDialogProps) => {
     }
     window.location.replace(getRoomURL(code))
   }
-  const roomUrl = useMemo(
-    () => getRoomURL(props.room).toString(),
-    [props.room]
-  )
+  const roomUrl = useMemo(() => getRoomURL(props.room), [props.room])
 
   return (
     <Dialog open={props.open} onClose={props.onClose} >
