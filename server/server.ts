@@ -61,8 +61,14 @@ if (process.env.NODE_ENV === 'production') {
   console.log(
     'WARNING: Development mode, set NODE_ENV=production to enable security features in production.'
   )
-  app.use((_, rsp, next) => {
-    rsp.header('Access-Control-Allow-Origin', '*')
+  app.use((req, rsp, next) => {
+    rsp.setHeader('Access-Control-Allow-Origin', '*')
+    rsp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    rsp.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    if (req.method === 'OPTIONS') {
+      rsp.sendStatus(204)
+      return
+    }
     next()
   })
 }
