@@ -1,5 +1,5 @@
 import { icons, prefixes } from './names'
-import config from './config'
+import { getDefaultRoomURL } from './client'
 import { sample, sampleSize } from 'lodash'
 
 const roomRE = /^[A-Z0-9]{6}$/
@@ -18,6 +18,81 @@ export function isGoodRoomAndName(id: string): boolean {
 }
 
 const alnum = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+/** Persisted on the SPA origin so refresh keeps the same room. */
+export const SESSION_ROOM_STORAGE_KEY = 'webdrop_session_room'
+export const SESSION_USER_STORAGE_KEY = 'webdrop_session_user'
+
+function storageGet(key: string): string | null {
+  if (typeof localStorage === 'undefined') {
+    return null
+  }
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function storageSet(key: string, value: string): void {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+/**
+ * Room for this browser session:
+ * URL → localStorage → subnet **default-room** API → random.
+ */
+export async function resolveSessionRoom(
+  search: URLSearchParams
+): Promise<string> {
+  const fromQuery = search.get('room')
+  if (fromQuery && isGoodRoom(fromQuery)) {
+    storageSet(SESSION_ROOM_STORAGE_KEY, fromQuery)
+    return fromQuery
+  }
+  const stored = storageGet(SESSION_ROOM_STORAGE_KEY)
+  if (stored && isGoodRoom(stored)) {
+    return stored
+  }
+  try {
+    const res = await fetch(getDefaultRoomURL())
+    if (res.ok) {
+      const data = (await res.json()) as { room?: string }
+      if (data.room && isGoodRoom(data.room)) {
+        storageSet(SESSION_ROOM_STORAGE_KEY, data.room)
+        return data.room
+      }
+    }
+  } catch {
+    /* offline / blocked */
+  }
+  const created = randomRoom()
+  storageSet(SESSION_ROOM_STORAGE_KEY, created)
+  return created
+}
+
+/** Display user id: URL → localStorage → random. */
+export function resolveSessionUser(search: URLSearchParams): string {
+  const fromQuery = search.get('user')
+  if (fromQuery && isGoodUser(fromQuery)) {
+    storageSet(SESSION_USER_STORAGE_KEY, fromQuery)
+    return fromQuery
+  }
+  const stored = storageGet(SESSION_USER_STORAGE_KEY)
+  if (stored && isGoodUser(stored)) {
+    return stored
+  }
+  const created = randomUser()
+  storageSet(SESSION_USER_STORAGE_KEY, created)
+  return created
+}
 
 export function randomRoom(): string {
   return sampleSize(alnum, 6).join('')
@@ -46,9 +121,9 @@ export const getUserIconPath = (uid: string): string => {
     name = uid.split('-')[2]
   }
   if (name && icons.includes(name)) {
-    return `${config.BASE_URL}icons/${name}.svg`
+    return `/icons/${name}.svg`
   }
-  return `${config.BASE_URL}icons/default.svg`
+  return '/icons/default.svg'
 }
 
 function _getUserShowName(prefix: string, name: string): string {

@@ -2,76 +2,19 @@ import 'dotenv/config'
 import express from 'express'
 import morgan from 'morgan'
 import helmet from 'helmet'
-import { IncomingMessage, createServer } from 'http'
-import { createHash } from 'crypto'
+import { createServer } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
+import {
+  getClientIp,
+  roomCodeFromSeed,
+  subnetSeedForLanRoom,
+} from './ipSubnet'
 
 const app = express()
 const server = createServer(app)
 
-const getUserIPRoom = (req: IncomingMessage) => {
-  let ip = ''
-  const xReal = req.headers['x-real-ip']
-  const forwarded = req.headers['x-forwarded-for']
-  const fromForwarded =
-    typeof forwarded === 'string'
-      ? forwarded.split(',')[0]?.trim()
-      : undefined
-  const realIP =
-    (typeof xReal === 'string' && xReal.length > 0 ? xReal : undefined) ??
-    fromForwarded ??
-    req.socket.remoteAddress
-  if (typeof realIP === 'string' && realIP.length > 0) {
-    ip = realIP
-  }
-  if (!ip) {
-    ip = Math.random().toString(36).substring(7)
-  }
-  const bname = createHash('md5').update(ip).digest('base64')
-  let name = ''
-  for (let b of bname) {
-    b = b.toUpperCase()
-    switch (b) {
-      case '+':
-        name += '0'
-        break
-      case '/':
-        name += '1'
-        break
-      case '=':
-        name += '2'
-        break
-      default:
-        name += b
-    }
-    if (name.length == 6) {
-      break
-    }
-  }
-  while (name.length != 6) {
-    name += 'Z'
-  }
-  return { name, ip }
-}
-
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1)
-  app.use(helmet())
-} else {
-  console.log(
-    'WARNING: Development mode, set NODE_ENV=production to enable security features in production.'
-  )
-  app.use((req, rsp, next) => {
-    rsp.setHeader('Access-Control-Allow-Origin', '*')
-    rsp.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    rsp.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-    if (req.method === 'OPTIONS') {
-      rsp.sendStatus(204)
-      return
-    }
-    next()
-  })
-}
+app.set('trust proxy', 1)
+app.use(helmet())
 app.use(morgan('short'))
 app.use(express.json({ limit: '512kb' }))
 
@@ -88,24 +31,18 @@ const _u = (url: string, prefix: string) => {
   return `/${cleanPath(prefix)}/${cleanPath(url)}`
 }
 
+const STATIC_PREFIX = '/'
+const PEER_PREFIX = '/peer'
+
 const u = (url: string) => {
-  return _u(url, process.env.BASE_URL || '/')
+  return _u(url, STATIC_PREFIX)
 }
 
 const pu = (url: string) => {
-  return _u(url, process.env.WEB_DROP_PEER_PATH || '/peer')
+  return _u(url, PEER_PREFIX)
 }
 
 const signalPath = pu('/signal')
-
-app.use(function (req, res, next) {
-  if (req.path === u('/')) {
-    const room = getUserIPRoom(req)
-    res.cookie('userip', room.ip, { maxAge: 900000 })
-    res.cookie('useriproom', room.name, { maxAge: 900000 })
-  }
-  next()
-})
 
 const roomID = /^[A-Z0-9]{6}$/
 
@@ -227,7 +164,18 @@ server.on('upgrade', (request, socket, head) => {
   })
 })
 
-const httpPort = parseInt(process.env.PORT || '8080', 10)
+function listenHost(): string {
+  const raw = process.env.HOST?.trim()
+  return raw && raw.length > 0 ? raw : 'localhost'
+}
+
+function listenPort(): number {
+  const raw = process.env.PORT?.trim()
+  const n = parseInt(raw && raw.length > 0 ? raw : '8080', 10)
+  return Number.isFinite(n) && n > 0 && n < 65536 ? n : 8080
+}
+
+const httpPort = listenPort()
 
 app.post(pu('/api/room/:room/presence'), (req, res) => {
   const rid = roomParam(req.params.room)
@@ -277,12 +225,19 @@ app.get(pu('/api/room/:room/users'), (req, res) => {
   )
 })
 
+/** Default room for this LAN segment (IPv4 private /24, etc.); used when SPA has no stored room. */
+app.get(pu('/api/default-room'), (req, res) => {
+  const ip = getClientIp(req)
+  const seed = ip ? subnetSeedForLanRoom(ip) : 'unknown'
+  res.json({ room: roomCodeFromSeed(seed) })
+})
+
 app.use(u('/'), express.static('dist'))
 
-const host = process.env.HOSTNAME || 'localhost'
+const host = listenHost()
 server.listen(
   {
-    host: host,
+    host,
     port: httpPort,
     exclusive: true,
   },

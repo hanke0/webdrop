@@ -1,29 +1,22 @@
-import config from './config'
+/** API + WebSocket signaling under same host as the page (dev: Vite proxies `/peer`). */
+const PEER_PATH = '/peer/'
+
+function peerApiOrigin(): string {
+  const { protocol, host } = window.location
+  let path = PEER_PATH
+  if (!path.startsWith('/')) {
+    path = `/${path}`
+  }
+  if (!path.endsWith('/')) {
+    path = `${path}/`
+  }
+  return `${protocol}//${host}${path}`
+}
 
 export function getRoomURL(room: string): string {
   const url = new URL(window.location.href)
   url.searchParams.set('room', room)
   return url.toString()
-}
-
-function peerApiOrigin(): string {
-  let host = config.PEER_HOSTNAME || window.location.hostname
-  if (host === '/') {
-    host = window.location.hostname
-  }
-  let port = config.PEER_PORT || window.location.port
-  if (port) {
-    port = `:${port}`
-  }
-  let path = config.PEER_PATH || '/'
-  if (!path.endsWith('/')) {
-    path = `${path}/`
-  }
-  if (!path.startsWith('/')) {
-    path = `/${path}`
-  }
-  const scheme = window.location.protocol || 'https:'
-  return `${scheme}//${host}${port}${path}`
 }
 
 export function getSignalWebSocketURL(room: string, logicalId: string): string {
@@ -42,6 +35,11 @@ export function getRoomUserListURL(room: string) {
 
 export function getRoomPresenceURL(room: string) {
   return `${peerApiOrigin()}api/room/${room}/presence`
+}
+
+/** Server maps client subnet → room code (same /24 LAN → same room). */
+export function getDefaultRoomURL(): string {
+  return `${peerApiOrigin()}api/default-room`
 }
 
 export function sleep(ms: number) {

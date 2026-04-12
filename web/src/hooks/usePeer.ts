@@ -1,45 +1,20 @@
 import { useSearchParams } from './useSearchParams'
-import { useCookies } from './useCookies'
 import { ConnectionCallback, LazyConnection, P2P } from '../lib/p2p'
-import { isGoodRoom, isGoodUser, randomRoom, randomUser } from '../lib/room'
+import { resolveSessionRoom, resolveSessionUser } from '../lib/room'
 import { MutableRefObject, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
-
-const getRoom = (search: URLSearchParams, cookies: Map<string, string>) => {
-  const rid = search.get('room')
-  if (rid && isGoodRoom(rid)) {
-    return rid
-  }
-  const rid1 = cookies.get('useriproom')
-  if (rid1 && isGoodRoom(rid1)) {
-    return rid1
-  }
-  return randomRoom()
-}
-
-const getUser = (search: URLSearchParams) => {
-  const uid = search.get('user')
-  if (uid && isGoodUser(uid)) {
-    return uid
-  }
-  return randomUser()
-}
 
 export function usePeer(
   addConnection: (conn: LazyConnection) => void,
   removeConnection: (conn: LazyConnection) => void,
   fileOfferRef: MutableRefObject<ConnectionCallback['fileOffer'] | undefined>
 ) {
-  const cookies = useCookies()
   const search = useSearchParams()
   const [peer, setPeer] = useState<P2P | null>(null)
 
   useEffect(() => {
     let cancelled = false
     let live: P2P | null = null
-    const room = getRoom(search, cookies)
-    const user = getUser(search)
-
     const inboundHandlers: ConnectionCallback = {
       open: addConnection,
       error: removeConnection,
@@ -51,6 +26,11 @@ export function usePeer(
 
     ;(async () => {
       try {
+        const room = await resolveSessionRoom(search)
+        if (cancelled) {
+          return
+        }
+        const user = resolveSessionUser(search)
         const instance = await P2P.create({ room, user }, inboundHandlers)
         if (cancelled) {
           instance.close()
@@ -88,7 +68,7 @@ export function usePeer(
       live?.close()
       setPeer(null)
     }
-  }, [cookies, search, addConnection, removeConnection])
+  }, [search, addConnection, removeConnection])
 
   return peer
 }

@@ -20,6 +20,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "./server.ts"
+    "./server.ts",
+    "./ipSubnet.ts"
   ]
 }

@@ -5,10 +5,8 @@ set -Eeo pipefail
 cd "$(dirname "$0")/.."
 pwd
 
-export WEB_DROP_PEER_PATH=/peer
-export WEB_DROP_PEER_PORT=10234
-export WEB_DROP_PEER_HOST=/
-export PORT=10234
+export HOST="${HOST:-localhost}"
+export PORT="${PORT:-8080}"
 export NODE_ENV=development
 
 npm run build -w @webdrop/server
@@ -25,7 +23,7 @@ peerpid=$!
 trap "kill $peerpid" TERM INT EXIT
 
 sleep 1
-nc -vz localhost 10234
+nc -vz 127.0.0.1 "$PORT"
 
 npm run dev -w @webdrop/web
 wait
