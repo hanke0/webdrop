@@ -76,7 +76,14 @@ export function usePeer(
       live?.close()
       setPeer(null)
     }
-  }, [search, addConnection, removeConnection, chatInviteRef, chatMessageRef])
+  }, [
+    search,
+    addConnection,
+    removeConnection,
+    fileOfferRef,
+    chatInviteRef,
+    chatMessageRef,
+  ])
 
   return peer
 }

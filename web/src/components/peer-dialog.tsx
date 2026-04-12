@@ -48,12 +48,7 @@ export function PeerDialog(props: PeerDialogProps) {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [lines.length, state?.kind])
 
-  const uid =
-    state && state.kind !== 'chat'
-      ? state.lazy.id
-      : state?.kind === 'chat'
-        ? state.peerId
-        : ''
+  const uid = !state ? '' : state.kind === 'chat' ? state.peerId : state.lazy.id
   const name = uid ? getUserShowName(uid) : ''
 
   const handleDialogClose = () => {

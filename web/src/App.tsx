@@ -30,7 +30,7 @@ import {
 import { LoadingPage } from './components/loading-page'
 import { ErrorPage } from './components/error-page'
 import { getUserShowName } from './lib/room'
-import useUsers from './hooks/useUsers'
+import { useUsers } from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -47,16 +47,14 @@ const generateListItem = ({ id }: LazyConnection) => {
 }
 
 const sendFile = async (conn: Connection, file: File) => {
-  console.log('sending file: ', conn.id, file.name)
   if (!conn.opened) {
     await sleep(500)
   }
   await conn.sendFileWithConsent(file)
-  console.log('sent file:', conn.id, file.name)
 }
 
 export default function Home() {
-  const [getUsers, addUser, removeUser, resetRoomUsers] = useUsers()
+  const { users, addUser, removeUser, resetRoomUsers } = useUsers()
   const [incomingFile, setIncomingFile] = useState<IncomingFileOffer | null>(
     null
   )
@@ -179,9 +177,11 @@ export default function Home() {
     [appendChatLine]
   )
 
-  fileOfferRef.current = handleFileOffer
-  chatInviteRef.current = handleChatInvite
-  chatMessageRef.current = handleChatMessage
+  useEffect(() => {
+    fileOfferRef.current = handleFileOffer
+    chatInviteRef.current = handleChatInvite
+    chatMessageRef.current = handleChatMessage
+  }, [handleFileOffer, handleChatInvite, handleChatMessage])
 
   const peer = usePeer(
     addUser,
@@ -219,7 +219,6 @@ export default function Home() {
     setListRefreshBusy(true)
     try {
       const data = await fetchRoomUsers(peer.room)
-      console.log('fetch room users:', peer.id, data)
       const pending = data
         .map((ele) => {
           const id = ele.id
@@ -229,8 +228,7 @@ export default function Home() {
         })
         .filter((c) => c.id !== peer.id)
       resetRoomUsers(pending)
-    } catch (err) {
-      console.log('fetch room users fail:', err)
+    } catch {
     } finally {
       window.setTimeout(() => setListRefreshBusy(false), 400)
     }
@@ -320,7 +318,7 @@ export default function Home() {
     if (!accepted) {
       return
     }
-    const lazy = getUsers().find((c) => c.id === offer.uid)
+    const lazy = users.find((c) => c.id === offer.uid)
     const conn = lazy?.getReal(peer)
     if (conn?.isChatActive()) {
       setPeerUi({ kind: 'chat', conn, peerId: conn.id })
@@ -377,7 +375,7 @@ export default function Home() {
                 </p>
                 <p className="mt-0.5 flex items-baseline gap-2">
                   <span className="text-2xl font-semibold tabular-nums text-[var(--wd-text)]">
-                    {getUsers().length}
+                    {users.length}
                   </span>
                   <span className="text-sm text-[var(--wd-muted)]">人</span>
                 </p>
@@ -414,14 +412,14 @@ export default function Home() {
               <p className="text-[11px] uppercase tracking-wider text-[var(--wd-muted)] font-semibold mb-3 px-1 text-left">
                 点击头像 · 发文件或聊天
               </p>
-              {getUsers().length === 0 ? (
+              {users.length === 0 ? (
                 <p className="text-center text-sm text-[var(--wd-muted)] py-8 px-2 leading-relaxed">
                   还没有其他成员。可先点右上角刷新，或分享房间码邀请对方加入。
                 </p>
               ) : (
                 <List
                   className="flex flex-row flex-wrap justify-center gap-3 py-1"
-                  items={getUsers()}
+                  items={users}
                   itemClassName="list-none"
                   getKey={(item) => item.id}
                   selectCallback={(item) =>

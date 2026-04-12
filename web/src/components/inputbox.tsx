@@ -1,12 +1,12 @@
-export type UploadProps = {
+export type InputBoxProps = {
   buttonText: string
   placeholder: string
-  onSubmit: (e: string) => void
+  onSubmit: (value: string) => void
   type?: string
   autoComplete?: string
 }
 
-export function InputBox(props: UploadProps) {
+export function InputBox(props: InputBoxProps) {
   return (
     <form
       className="w-full"

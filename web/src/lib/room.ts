@@ -1,6 +1,5 @@
 import { icons, prefixes } from './names'
 import { fetchDefaultRoom } from './api'
-import { sample, sampleSize } from 'lodash'
 
 const roomRE = /^[A-Z0-9]{6}$/
 export function isGoodRoom(room: string): boolean {
@@ -92,14 +91,19 @@ export function resolveSessionUser(search: URLSearchParams): string {
 }
 
 export function randomRoom(): string {
-  return sampleSize(alnum, 6).join('')
+  const chars = alnum.split('')
+  let out = ''
+  for (let i = 0; i < 6; i++) {
+    const j = Math.floor(Math.random() * chars.length)
+    out += chars[j]!
+    chars.splice(j, 1)
+  }
+  return out
 }
 
-export const randomUser = (): string => {
-  const prefix = sample(prefixes)
-  if (!prefix) throw new Error('prefix is undefined')
-  const name = sample(icons)
-  if (!name) throw new Error('name is undefined')
+export function randomUser(): string {
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
+  const name = icons[Math.floor(Math.random() * icons.length)]
   return `${prefix}-${name}`
 }
 

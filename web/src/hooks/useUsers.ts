@@ -1,5 +1,5 @@
-import { LazyConnection } from "../lib/p2p";
-import { useCallback, useState } from "react";
+import { LazyConnection } from '../lib/p2p'
+import { useCallback, useMemo, useState } from 'react'
 
 function add(conn: LazyConnection, list: LazyConnection[]) {
   if (!list.find((c) => c.id === conn.id)) {
@@ -12,11 +12,16 @@ function remove(conn: LazyConnection, list: LazyConnection[]) {
   return list.filter((c) => c.id !== conn.id)
 }
 
-export default function useUsers() {
+export function useUsers() {
   const [state, setState] = useState({
     conns: [] as LazyConnection[],
     roomUsers: [] as LazyConnection[],
   })
+
+  const users = useMemo(
+    () => [...state.conns, ...state.roomUsers],
+    [state.conns, state.roomUsers]
+  )
 
   const addUser = useCallback((conn: LazyConnection) => {
     setState((prev) => {
@@ -51,14 +56,5 @@ export default function useUsers() {
     })
   }, [])
 
-  const getUsers = useCallback(() => {
-    return [...state.conns, ...state.roomUsers]
-  }, [state])
-
-  return [
-    getUsers,
-    addUser,
-    removeUser,
-    resetRoomUsers,
-  ] as const
+  return { users, addUser, removeUser, resetRoomUsers }
 }
