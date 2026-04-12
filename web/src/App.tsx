@@ -131,8 +131,8 @@ export default function Home() {
         return
       }
       peer.connect(fullName, u.addrs ?? [], outboundHandlers)
-    } catch (err) {
-      toast.error(`Connect fail: ${err}`)
+    } catch {
+      /* fetchRoomUsers already toasts HTTP / parse errors */
     }
   }
 
@@ -167,7 +167,7 @@ export default function Home() {
       resetRoomUsers(pending)
     } catch (err) {
       console.log('fetch room users fail:', err)
-      toast.error(`fetch room users fail: ${err}`)
+      /* fetchRoomUsers already toasts HTTP / parse errors */
     }
   }
 

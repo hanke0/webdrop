@@ -3,7 +3,36 @@
  * Dev: Vite proxies `/api/v1` to the Node server.
  */
 
+import toast from 'react-hot-toast'
+
 const API_V1_PREFIX = '/api/v1'
+
+function toastHttpError(label: string, res: Response): void {
+  const tail = res.statusText ? ` ${res.statusText}` : ''
+  toast.error(`${label} failed (${res.status})${tail}`)
+}
+
+function toastPresenceHttpError(res: Response): void {
+  const tail = res.statusText ? ` ${res.statusText}` : ''
+  toastPresenceError(`Presence update failed (${res.status})${tail}`)
+}
+
+function toastNetworkError(label: string, err: unknown): void {
+  const msg = err instanceof Error ? err.message : String(err)
+  toast.error(`${label} failed: ${msg}`)
+}
+
+let lastPresenceErrorToastAt = 0
+const PRESENCE_ERROR_TOAST_COOLDOWN_MS = 60_000
+
+function toastPresenceError(message: string): void {
+  const now = Date.now()
+  if (now - lastPresenceErrorToastAt < PRESENCE_ERROR_TOAST_COOLDOWN_MS) {
+    return
+  }
+  lastPresenceErrorToastAt = now
+  toast.error(message)
+}
 
 function apiV1Base(): string {
   const { protocol, host } = window.location
@@ -45,14 +74,23 @@ export async function fetchDefaultRoom(): Promise<{ room: string } | null> {
   try {
     const res = await fetch(defaultRoomUrl())
     if (!res.ok) {
+      toastHttpError('Default room', res)
       return null
     }
-    const data = (await res.json()) as { room?: string }
+    let data: { room?: string }
+    try {
+      data = (await res.json()) as { room?: string }
+    } catch {
+      toast.error('Default room: invalid response from server')
+      return null
+    }
     if (typeof data.room === 'string') {
       return { room: data.room }
     }
+    toast.error('Default room: server did not return a room code')
     return null
-  } catch {
+  } catch (e) {
+    toastNetworkError('Default room', e)
     return null
   }
 }
@@ -61,11 +99,23 @@ export async function fetchDefaultRoom(): Promise<{ room: string } | null> {
 export async function fetchRoomUsers(
   room: string
 ): Promise<RoomUserListItem[]> {
-  const res = await fetch(roomUsersUrl(room))
-  if (!res.ok) {
-    throw new Error(res.statusText)
+  let res: Response
+  try {
+    res = await fetch(roomUsersUrl(room))
+  } catch (e) {
+    toastNetworkError('Room user list', e)
+    throw e
   }
-  return (await res.json()) as RoomUserListItem[]
+  if (!res.ok) {
+    toastHttpError('Room user list', res)
+    throw new Error(`Room user list failed (${res.status})`)
+  }
+  try {
+    return (await res.json()) as RoomUserListItem[]
+  } catch (e) {
+    toastNetworkError('Room user list (parse response)', e)
+    throw new Error('Room user list: invalid JSON from server')
+  }
 }
 
 /** Heartbeat / address registration (`POST /api/v1/room/:room/presence`). */
@@ -82,9 +132,13 @@ export async function postRoomPresence(
     })
     if (!res.ok) {
       console.warn('presence POST failed:', res.status)
+      toastPresenceHttpError(res)
     }
   } catch (e) {
     console.warn('presence POST error:', e)
+    toastPresenceError(
+      e instanceof Error ? e.message : `Presence update failed: ${String(e)}`
+    )
   }
 }
 
