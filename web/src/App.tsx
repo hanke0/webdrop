@@ -212,6 +212,34 @@ export default function Home() {
     [addUser, removeUser]
   )
 
+  const handleRefreshRoomUsers = useCallback(async () => {
+    if (!peer || peer.err) {
+      return
+    }
+    setListRefreshBusy(true)
+    try {
+      const data = await fetchRoomUsers(peer.room)
+      console.log('fetch room users:', peer.id, data)
+      const pending = data
+        .map((ele) => {
+          const id = ele.id
+          const addrs = ele.addrs ?? []
+          const builder = (p: P2P) => p.connect(id, addrs, outboundHandlers)
+          return new LazyConnectionImpl(id, builder)
+        })
+        .filter((c) => c.id !== peer.id)
+      resetRoomUsers(pending)
+    } catch (err) {
+      console.log('fetch room users fail:', err)
+    } finally {
+      window.setTimeout(() => setListRefreshBusy(false), 400)
+    }
+  }, [peer, outboundHandlers, resetRoomUsers])
+
+  useEffect(() => {
+    void handleRefreshRoomUsers()
+  }, [handleRefreshRoomUsers])
+
   if (!peer) {
     return <LoadingPage />
   }
@@ -282,27 +310,6 @@ export default function Home() {
   const handleSendChat = (conn: Connection, text: string) => {
     conn.sendChatText(text)
     appendChatLine(conn.id, true, text)
-  }
-
-  const handleRefreshRoomUsers = async () => {
-    setListRefreshBusy(true)
-    try {
-      const data = await fetchRoomUsers(peer.room)
-      console.log('fetch room users:', peer.id, data)
-      const pending = data
-        .map((ele) => {
-          const id = ele.id
-          const addrs = ele.addrs ?? []
-          const builder = (p: P2P) => p.connect(id, addrs, outboundHandlers)
-          return new LazyConnectionImpl(id, builder)
-        })
-        .filter((c) => c.id !== peer.id)
-      resetRoomUsers(pending)
-    } catch (err) {
-      console.log('fetch room users fail:', err)
-    } finally {
-      window.setTimeout(() => setListRefreshBusy(false), 400)
-    }
   }
 
   const handleChatInviteResolved = (
