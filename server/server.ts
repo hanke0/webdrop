@@ -94,6 +94,15 @@ function pruneRoom(rid: string) {
 /** room id → logical id → websocket (WebRTC signaling only, not a libp2p relay) */
 const signalSockets = new Map<string, Map<string, WebSocket>>()
 
+/** Application-defined WebSocket close: same room + username already connected. */
+const WS_CLOSE_USERNAME_IN_USE = 4002
+
+function wsIsClaimed(ws: WebSocket): boolean {
+  return (
+    ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING
+  )
+}
+
 function registerSignalSocket(
   room: string,
   logicalId: string,
@@ -105,8 +114,9 @@ function registerSignalSocket(
     signalSockets.set(room, m)
   }
   const prev = m.get(logicalId)
-  if (prev && prev !== ws && prev.readyState === WebSocket.OPEN) {
-    prev.close(4001, 'replaced')
+  if (prev && prev !== ws && wsIsClaimed(prev)) {
+    ws.close(WS_CLOSE_USERNAME_IN_USE, 'username_in_use')
+    return
   }
   m.set(logicalId, ws)
   ws.on('close', () => {

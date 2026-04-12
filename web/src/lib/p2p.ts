@@ -5,6 +5,9 @@ import { concat } from 'uint8arrays/concat'
 import { fromString, toString } from 'uint8arrays'
 import { connectSignalingWebSocket, postRoomPresence } from './api'
 
+/** Must match server `WS_CLOSE_USERNAME_IN_USE` (same room + display name already online). */
+const SIGNAL_USERNAME_IN_USE_CODE = 4002
+
 const FRAME_JSON = 0
 const FRAME_BIN = 1
 const FILE_CHUNK = 256 * 1024
@@ -195,8 +198,66 @@ export class P2P {
       const ws = connectSignalingWebSocket(options.room, logicalId)
       instance.ws = ws
       await new Promise<void>((resolve, reject) => {
-        ws.onopen = () => resolve()
-        ws.onerror = () => reject(new Error('WebRTC signaling connection failed'))
+        let sawOpen = false
+        let handshakeCloseCode = 0
+        let finished = false
+        const cleanup = () => {
+          ws.removeEventListener('close', onHandshakeClose)
+        }
+        const fail = (err: Error) => {
+          if (finished) {
+            return
+          }
+          finished = true
+          cleanup()
+          reject(err)
+        }
+        const ok = () => {
+          if (finished) {
+            return
+          }
+          finished = true
+          cleanup()
+          resolve()
+        }
+        const onHandshakeClose = (ev: CloseEvent) => {
+          handshakeCloseCode = ev.code
+          queueMicrotask(() => {
+            if (finished || sawOpen) {
+              return
+            }
+            fail(
+              new Error(
+                handshakeCloseCode === SIGNAL_USERNAME_IN_USE_CODE
+                  ? 'This username is already in use in this room'
+                  : 'WebRTC signaling connection closed'
+              )
+            )
+          })
+        }
+        ws.addEventListener('close', onHandshakeClose)
+        ws.onopen = () => {
+          sawOpen = true
+          queueMicrotask(() => {
+            if (finished) {
+              return
+            }
+            if (ws.readyState !== WebSocket.OPEN) {
+              fail(
+                new Error(
+                  handshakeCloseCode === SIGNAL_USERNAME_IN_USE_CODE
+                    ? 'This username is already in use in this room'
+                    : 'WebRTC signaling connection closed'
+                )
+              )
+              return
+            }
+            ok()
+          })
+        }
+        ws.onerror = () => {
+          fail(new Error('WebRTC signaling connection failed'))
+        }
       })
       ws.onmessage = (ev) => {
         let parsed: { from?: string; payload?: SignalPayload }
