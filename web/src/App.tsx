@@ -14,17 +14,25 @@ import { Main } from './components/main'
 import { fetchRoomUsers } from './lib/api'
 import { sleep } from './lib/util'
 import { UserText } from './components/user-text'
-import { FileSendDialog } from './components/file-send-dialog'
 import {
   FileReceiveDialog,
   IncomingFileOffer,
 } from './components/file-receive-dialog'
+import {
+  ChatInviteDialog,
+  IncomingChatInvite,
+} from './components/chat-invite-dialog'
+import {
+  ChatLine,
+  PeerDialog,
+  PeerDialogState,
+} from './components/peer-dialog'
 import { LoadingPage } from './components/loading-page'
 import { ErrorPage } from './components/error-page'
 import { getUserShowName } from './lib/room'
 import useUsers from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
@@ -39,7 +47,7 @@ const generateListItem = ({ id }: LazyConnection) => {
 const sendFile = async (conn: Connection, file: File) => {
   console.log('sending file: ', conn.id, file.name)
   if (!conn.opened) {
-    await sleep(500) // wait for connection open
+    await sleep(500)
   }
   await conn.sendFileWithConsent(file)
   console.log('sent file:', conn.id, file.name)
@@ -50,6 +58,22 @@ export default function Home() {
   const [incomingFile, setIncomingFile] = useState<IncomingFileOffer | null>(
     null
   )
+  const [incomingChat, setIncomingChat] = useState<IncomingChatInvite | null>(
+    null
+  )
+  const [peerUi, setPeerUi] = useState<PeerDialogState>(null)
+  const [chatLines, setChatLines] = useState<Record<string, ChatLine[]>>({})
+  const chatLoadDismissedRef = useRef(false)
+
+  const incomingFileRef = useRef(incomingFile)
+  const incomingChatRef = useRef(incomingChat)
+  useEffect(() => {
+    incomingFileRef.current = incomingFile
+  }, [incomingFile])
+  useEffect(() => {
+    incomingChatRef.current = incomingChat
+  }, [incomingChat])
+
   const fileOfferRef = useRef<
     | ((
         conn: Connection,
@@ -65,9 +89,14 @@ export default function Home() {
       meta: { transferId: string; name: string; size: number },
       respond: (accepted: boolean) => void
     ) => {
+      if (incomingChatRef.current) {
+        toast.error('已有聊天请求待处理，无法接受文件')
+        respond(false)
+        return
+      }
       setIncomingFile((prev) => {
         if (prev) {
-          toast.error('Another file is already waiting for your response')
+          toast.error('已有文件正在等待你的确认')
           respond(false)
           return prev
         }
@@ -83,10 +112,81 @@ export default function Home() {
     []
   )
 
-  fileOfferRef.current = handleFileOffer
+  const chatInviteRef = useRef<
+    | ((
+        conn: Connection,
+        meta: { inviteId: string },
+        respond: (accepted: boolean) => void
+      ) => void)
+    | undefined
+  >(undefined)
 
-  const peer = usePeer(addUser, removeUser, fileOfferRef)
-  const [curConn, setCurConn] = useState<LazyConnection | null>(null)
+  const handleChatInvite = useCallback(
+    (
+      conn: Connection,
+      meta: { inviteId: string },
+      respond: (accepted: boolean) => void
+    ) => {
+      if (incomingFileRef.current) {
+        toast.error('正在处理文件传输请求，无法接受聊天')
+        respond(false)
+        return
+      }
+      setIncomingChat((prev) => {
+        if (prev) {
+          toast.error('已有聊天或文件请求待处理')
+          respond(false)
+          return prev
+        }
+        return {
+          inviteId: meta.inviteId,
+          uid: conn.id,
+          respond,
+        }
+      })
+    },
+    []
+  )
+
+  const appendChatLine = useCallback(
+    (peerId: string, self: boolean, text: string) => {
+      setChatLines((prev) => {
+        const row: ChatLine = {
+          id: crypto.randomUUID(),
+          self,
+          text,
+        }
+        const list = prev[peerId] ?? []
+        return { ...prev, [peerId]: [...list, row] }
+      })
+    },
+    []
+  )
+
+  const chatMessageRef = useRef<
+    | ((conn: Connection, msg: { name: string; payload: string }) => void)
+    | undefined
+  >(undefined)
+
+  const handleChatMessage = useCallback(
+    (conn: Connection, msg: { name: string; payload: string }) => {
+      const line = msg.name ? `${msg.name}: ${msg.payload}` : msg.payload
+      appendChatLine(conn.id, false, line)
+    },
+    [appendChatLine]
+  )
+
+  fileOfferRef.current = handleFileOffer
+  chatInviteRef.current = handleChatInvite
+  chatMessageRef.current = handleChatMessage
+
+  const peer = usePeer(
+    addUser,
+    removeUser,
+    fileOfferRef,
+    chatInviteRef,
+    chatMessageRef
+  )
 
   const outboundHandlers = useMemo(
     () => ({
@@ -98,6 +198,12 @@ export default function Home() {
       },
       get fileOffer() {
         return fileOfferRef.current
+      },
+      get chatInvite() {
+        return chatInviteRef.current
+      },
+      get chatMessage() {
+        return chatMessageRef.current
       },
     }),
     [addUser, removeUser]
@@ -136,20 +242,43 @@ export default function Home() {
     }
   }
 
-  const handleSendFile = async (file: File) => {
-    console.log('send file:', file.name)
-    if (!curConn) {
-      toast.error('Connect not selected')
+  const handleSendFileToPeer = async (conn: Connection, file: File) => {
+    const name = getUserShowName(conn.id)
+    toast.promise(sendFile(conn, file), {
+      loading: `正在向 ${name} 发送 ${file.name}…`,
+      success: `已发送 ${file.name} 给 ${name}`,
+      error: (err) => `发送失败: ${err}`,
+    })
+  }
+
+  const handleStartChat = async (lazy: LazyConnection) => {
+    chatLoadDismissedRef.current = false
+    const conn = lazy.getReal(peer)
+    setPeerUi({ kind: 'chat-loading', lazy })
+    const ok = await conn.requestChat()
+    if (chatLoadDismissedRef.current) {
       return
     }
-    const name = getUserShowName(curConn.id)
-    const conn = curConn.getReal(peer)
-    setCurConn(null) // close dialog
-    toast.promise(sendFile(conn, file), {
-      loading: `Sending to ${name} with file ${file.name}...`,
-      success: `Successfully sent ${file.name} to ${name}`,
-      error: (err) => `Send to ${name} with file ${file.name} fail: ${err}`,
+    if (!ok) {
+      toast.error('对方拒绝了聊天或未在规定时间内响应')
+      setPeerUi({ kind: 'menu', lazy })
+      return
+    }
+    setPeerUi({ kind: 'chat', conn, peerId: conn.id })
+  }
+
+  const handlePeerDialogClose = () => {
+    setPeerUi((cur) => {
+      if (cur?.kind === 'chat-loading') {
+        chatLoadDismissedRef.current = true
+      }
+      return null
     })
+  }
+
+  const handleSendChat = (conn: Connection, text: string) => {
+    conn.sendChatText(text)
+    appendChatLine(conn.id, true, text)
   }
 
   const handleRefreshRoomUsers = async () => {
@@ -167,7 +296,21 @@ export default function Home() {
       resetRoomUsers(pending)
     } catch (err) {
       console.log('fetch room users fail:', err)
-      /* fetchRoomUsers already toasts HTTP / parse errors */
+    }
+  }
+
+  const handleChatInviteResolved = (
+    accepted: boolean,
+    offer: IncomingChatInvite
+  ) => {
+    setIncomingChat(null)
+    if (!accepted) {
+      return
+    }
+    const lazy = getUsers().find((c) => c.id === offer.uid)
+    const conn = lazy?.getReal(peer)
+    if (conn?.isChatActive()) {
+      setPeerUi({ kind: 'chat', conn, peerId: conn.id })
     }
   }
 
@@ -179,11 +322,24 @@ export default function Home() {
         offer={incomingFile}
         onClose={() => setIncomingFile(null)}
       />
-      <FileSendDialog
-        open={() => !!curConn}
-        onClose={() => setCurConn(null)}
-        handleSendFile={handleSendFile}
-        uid={curConn?.id || ''}
+      <ChatInviteDialog
+        key={incomingChat?.inviteId ?? 'no-chat'}
+        open={() => !!incomingChat}
+        offer={incomingChat}
+        onResolved={handleChatInviteResolved}
+      />
+      <PeerDialog
+        state={peerUi}
+        peer={peer}
+        lines={
+          peerUi?.kind === 'chat' ? chatLines[peerUi.peerId] ?? [] : []
+        }
+        open={() => !!peerUi}
+        onClose={handlePeerDialogClose}
+        onStateChange={setPeerUi}
+        onSendFile={handleSendFileToPeer}
+        onStartChat={handleStartChat}
+        onSendChat={handleSendChat}
       />
       <Main>
         <Card>
@@ -218,7 +374,9 @@ export default function Home() {
                 items={getUsers()}
                 itemClassName="px-4 block"
                 getKey={(item) => item.id}
-                selectCallback={(item) => setCurConn(item)}
+                selectCallback={(item) =>
+                  setPeerUi({ kind: 'menu', lazy: item })
+                }
                 genContent={generateListItem}
               />
             </Card>

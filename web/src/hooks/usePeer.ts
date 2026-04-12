@@ -7,7 +7,9 @@ import { toast } from 'react-hot-toast'
 export function usePeer(
   addConnection: (conn: LazyConnection) => void,
   removeConnection: (conn: LazyConnection) => void,
-  fileOfferRef: MutableRefObject<ConnectionCallback['fileOffer'] | undefined>
+  fileOfferRef: MutableRefObject<ConnectionCallback['fileOffer'] | undefined>,
+  chatInviteRef: MutableRefObject<ConnectionCallback['chatInvite'] | undefined>,
+  chatMessageRef: MutableRefObject<ConnectionCallback['chatMessage'] | undefined>
 ) {
   const search = useSearchParams()
   const [peer, setPeer] = useState<P2P | null>(null)
@@ -21,6 +23,12 @@ export function usePeer(
       close: removeConnection,
       get fileOffer() {
         return fileOfferRef.current
+      },
+      get chatInvite() {
+        return chatInviteRef.current
+      },
+      get chatMessage() {
+        return chatMessageRef.current
       },
     }
 
@@ -68,7 +76,7 @@ export function usePeer(
       live?.close()
       setPeer(null)
     }
-  }, [search, addConnection, removeConnection])
+  }, [search, addConnection, removeConnection, chatInviteRef, chatMessageRef])
 
   return peer
 }

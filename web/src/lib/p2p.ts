@@ -1,4 +1,4 @@
-import { isGoodUser, splitRoomAndUser } from './room'
+import { getUserShowName, isGoodUser, splitRoomAndUser } from './room'
 import toast from 'react-hot-toast'
 import fileDownload from 'js-file-download'
 import { concat } from 'uint8arrays/concat'
@@ -19,6 +19,8 @@ const rtcConfig: RTCConfiguration = {
 /** P2P wire messages (discriminated by `type`). */
 export type WireData =
   | { type: 'text'; name: string; payload: string }
+  | { type: 'chat-invite'; inviteId: string }
+  | { type: 'chat-invite-response'; inviteId: string; accepted: boolean }
   | {
       type: 'file-offer'
       transferId: string
@@ -582,6 +584,10 @@ export type FileOfferMeta = {
   size: number
 }
 
+export type ChatInviteMeta = {
+  inviteId: string
+}
+
 export type ConnectionCallback = {
   knock?: (conn: Connection) => void
   open: (conn: Connection) => void
@@ -591,6 +597,15 @@ export type ConnectionCallback = {
     conn: Connection,
     meta: FileOfferMeta,
     respond: (accepted: boolean) => void
+  ) => void
+  chatInvite?: (
+    conn: Connection,
+    meta: ChatInviteMeta,
+    respond: (accepted: boolean) => void
+  ) => void
+  chatMessage?: (
+    conn: Connection,
+    msg: { name: string; payload: string }
   ) => void
 }
 
@@ -638,6 +653,16 @@ export class Connection implements LazyConnection {
       timer: ReturnType<typeof setTimeout>
     }
   >()
+  private pendingChatInviteResponses = new Map<
+    string,
+    {
+      resolve: (accepted: boolean) => void
+      promiseReject: (err: Error) => void
+      timer: ReturnType<typeof setTimeout>
+    }
+  >()
+  /** Both peers set this after a successful chat-invite handshake. */
+  private chatAccepted = false
   private fileSink: {
     transferId: string
     name: string
@@ -666,6 +691,60 @@ export class Connection implements LazyConnection {
 
   onFinally(cb: () => void) {
     this.finallyCb = cb
+  }
+
+  isChatActive(): boolean {
+    return this.chatAccepted
+  }
+
+  /** Ask peer to start a text chat; resolves when they accept or decline. */
+  async requestChat(timeoutMs = 60_000): Promise<boolean> {
+    if (this.chatAccepted) {
+      return true
+    }
+    if (!this.chOpen()) {
+      toast.error(`connection to ${this.id} is not open`)
+      return false
+    }
+    const inviteId = crypto.randomUUID()
+    try {
+      const accepted = await new Promise<boolean>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          const p = this.pendingChatInviteResponses.get(inviteId)
+          if (p) {
+            clearTimeout(p.timer)
+            this.pendingChatInviteResponses.delete(inviteId)
+            p.promiseReject(new Error('Timed out waiting for chat response'))
+          }
+        }, timeoutMs)
+        this.pendingChatInviteResponses.set(inviteId, {
+          resolve,
+          promiseReject: reject,
+          timer,
+        })
+        void this.sendJson({ type: 'chat-invite', inviteId })
+      })
+      if (accepted) {
+        this.chatAccepted = true
+      }
+      return accepted
+    } catch (e) {
+      console.warn('requestChat:', e)
+      return false
+    }
+  }
+
+  sendChatText(body: string): void {
+    const t = body.trim()
+    if (!t) {
+      return
+    }
+    if (!this.chatAccepted) {
+      toast.error('对方尚未接受文字聊天')
+      return
+    }
+    const name = getUserShowName(this.p2p.id)
+    this.send({ type: 'text', name, payload: t })
   }
 
   constructor(
@@ -842,7 +921,39 @@ export class Connection implements LazyConnection {
       'name' in data ? data.name : ''
     )
     if (data.type === 'text') {
-      toast(`receive message from ${data.name}: ${data.payload}`)
+      if (this.chatAccepted) {
+        this.callback.chatMessage?.(this, {
+          name: data.name,
+          payload: data.payload,
+        })
+      }
+      return
+    }
+    if (data.type === 'chat-invite') {
+      const inviteId = data.inviteId
+      if (!inviteId) {
+        return
+      }
+      const respond = (accepted: boolean) => {
+        void this.sendJson({
+          type: 'chat-invite-response',
+          inviteId,
+          accepted,
+        })
+        if (accepted) {
+          this.chatAccepted = true
+        }
+      }
+      this.callback.chatInvite?.(this, { inviteId }, respond)
+      return
+    }
+    if (data.type === 'chat-invite-response') {
+      const pending = this.pendingChatInviteResponses.get(data.inviteId)
+      if (pending) {
+        clearTimeout(pending.timer)
+        this.pendingChatInviteResponses.delete(data.inviteId)
+        pending.resolve(data.accepted)
+      }
       return
     }
     if (data.type === 'file-offer-response') {
@@ -902,6 +1013,14 @@ export class Connection implements LazyConnection {
     for (const [tid, p] of [...this.pendingOfferResponses.entries()]) {
       clearTimeout(p.timer)
       this.pendingOfferResponses.delete(tid)
+      p.promiseReject(err)
+    }
+  }
+
+  private clearPendingChatInvites(err: Error) {
+    for (const [id, p] of [...this.pendingChatInviteResponses.entries()]) {
+      clearTimeout(p.timer)
+      this.pendingChatInviteResponses.delete(id)
       p.promiseReject(err)
     }
   }
@@ -980,6 +1099,8 @@ export class Connection implements LazyConnection {
       return
     }
     this.clearPendingOffers(new Error('Connection closed'))
+    this.clearPendingChatInvites(new Error('Connection closed'))
+    this.chatAccepted = false
     if (this.signalPeerId !== null) {
       this.p2p.unregisterInHandler(this.signalPeerId)
     } else {
