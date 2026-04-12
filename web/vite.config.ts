@@ -1,3 +1,5 @@
+import { EventEmitter } from 'node:events'
+import type { ClientRequest, IncomingMessage } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -8,9 +10,18 @@ import tailwindcss from '@tailwindcss/vite'
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Proxy to the same HOST:PORT the Node server uses (`0.0.0.0` → loopback for the client). */
-function peerDevProxyTarget(env: Record<string, string>): string {
-  const hostRaw = (env.HOST ?? process.env.HOST ?? '127.0.0.1').trim()
-  const portRaw = (env.PORT ?? process.env.PORT ?? '8080').trim()
+function devApiProxyTarget(env: Record<string, string>): string {
+  const explicit = (env.WEB_DROP_DEV_PROXY_TARGET ?? '').trim()
+  if (explicit.length > 0) {
+    return explicit
+  }
+  /* Shell (e.g. serve-dev.sh) overrides repo .env so proxy matches the live server. */
+  const hostRaw = (
+    process.env.HOST ??
+    env.HOST ??
+    '127.0.0.1'
+  ).trim()
+  const portRaw = (process.env.PORT ?? env.PORT ?? '8080').trim()
   const port = /^\d+$/.test(portRaw) ? portRaw : '8080'
   let host = hostRaw.length > 0 ? hostRaw : '127.0.0.1'
   if (host === '0.0.0.0' || host === '::') {
@@ -27,10 +38,8 @@ function withForwardedClientIp(target: string, ws?: boolean) {
     target,
     changeOrigin: true,
     ...(ws ? { ws: true } : {}),
-    configure: (
-      proxy: { on: (ev: string, fn: (...args: unknown[]) => void) => void }
-    ) => {
-      proxy.on('proxyReq', (proxyReq: { setHeader: (k: string, v: string) => void }, req: { socket?: { remoteAddress?: string } }) => {
+    configure: (proxy: EventEmitter) => {
+      proxy.on('proxyReq', (proxyReq: ClientRequest, req: IncomingMessage) => {
         const raw = req.socket?.remoteAddress
         if (typeof raw === 'string' && raw.length > 0) {
           proxyReq.setHeader('X-Forwarded-For', raw)
@@ -42,11 +51,11 @@ function withForwardedClientIp(target: string, ws?: boolean) {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, repoRoot, '')
-  const devPeerTarget = peerDevProxyTarget(env)
+  const devApiTarget = devApiProxyTarget(env)
 
   const devProxy =
     mode === 'development'
-      ? { '/peer': withForwardedClientIp(devPeerTarget, true) }
+      ? { '/api/v1': withForwardedClientIp(devApiTarget, true) }
       : undefined
 
   const manifest = {

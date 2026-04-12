@@ -1,9 +1,9 @@
-/** API + WebSocket signaling under same host as the page (dev: Vite proxies `/peer`). */
-const PEER_PATH = '/peer/'
+/** REST + WebSocket signaling under same host as the page (dev: Vite proxies `/api/v1`). */
+const API_V1_PREFIX = '/api/v1'
 
-function peerApiOrigin(): string {
+function apiV1Base(): string {
   const { protocol, host } = window.location
-  let path = PEER_PATH
+  let path = API_V1_PREFIX
   if (!path.startsWith('/')) {
     path = `/${path}`
   }
@@ -20,26 +20,25 @@ export function getRoomURL(room: string): string {
 }
 
 export function getSignalWebSocketURL(room: string, logicalId: string): string {
-  const origin = peerApiOrigin()
-  const u = new URL(origin)
-  const wsScheme = u.protocol === 'https:' ? 'wss:' : 'ws:'
-  const base = u.pathname.replace(/\/+$/, '') || ''
-  const pathSeg = base === '' ? '/signal' : `${base}/signal`
+  const { protocol, host } = window.location
+  const wsScheme = protocol === 'https:' ? 'wss:' : 'ws:'
+  const base = API_V1_PREFIX.replace(/\/+$/, '') || '/api/v1'
+  const pathSeg = `${base.startsWith('/') ? base : `/${base}`}/signal`
   const q = new URLSearchParams({ room, logicalId })
-  return `${wsScheme}//${u.host}${pathSeg}?${q}`
+  return `${wsScheme}//${host}${pathSeg}?${q}`
 }
 
 export function getRoomUserListURL(room: string) {
-  return `${peerApiOrigin()}api/room/${room}/users`
+  return `${apiV1Base()}room/${room}/users`
 }
 
 export function getRoomPresenceURL(room: string) {
-  return `${peerApiOrigin()}api/room/${room}/presence`
+  return `${apiV1Base()}room/${room}/presence`
 }
 
 /** Server maps client subnet → room code (same /24 LAN → same room). */
 export function getDefaultRoomURL(): string {
-  return `${peerApiOrigin()}api/default-room`
+  return `${apiV1Base()}default-room`
 }
 
 export function sleep(ms: number) {

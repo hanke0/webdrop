@@ -28,3 +28,4 @@ dist-ssr
 /server/webdrop-server.cjs
 /release
 *.tar.*
+*.tsbuildinfo

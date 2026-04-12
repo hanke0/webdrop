@@ -32,17 +32,17 @@ const _u = (url: string, prefix: string) => {
 }
 
 const STATIC_PREFIX = '/'
-const PEER_PREFIX = '/peer'
+const API_V1_PREFIX = '/api/v1'
 
 const u = (url: string) => {
   return _u(url, STATIC_PREFIX)
 }
 
-const pu = (url: string) => {
-  return _u(url, PEER_PREFIX)
+const v1 = (url: string) => {
+  return _u(url, API_V1_PREFIX)
 }
 
-const signalPath = pu('/signal')
+const signalPath = v1('/signal')
 
 const roomID = /^[A-Z0-9]{6}$/
 
@@ -177,7 +177,7 @@ function listenPort(): number {
 
 const httpPort = listenPort()
 
-app.post(pu('/api/room/:room/presence'), (req, res) => {
+app.post(v1('/room/:room/presence'), (req, res) => {
   const rid = roomParam(req.params.room)
   const body = req.body as { logicalId?: string; addrs?: unknown }
   if (!rid || typeof body.logicalId !== 'string' || !Array.isArray(body.addrs)) {
@@ -205,7 +205,7 @@ app.post(pu('/api/room/:room/presence'), (req, res) => {
   res.json({ ok: true })
 })
 
-app.get(pu('/api/room/:room/users'), (req, res) => {
+app.get(v1('/room/:room/users'), (req, res) => {
   const rid = roomParam(req.params.room)
   if (!rid) {
     res.status(400).send('Invalid room')
@@ -226,7 +226,7 @@ app.get(pu('/api/room/:room/users'), (req, res) => {
 })
 
 /** Default room for this LAN segment (IPv4 private /24, etc.); used when SPA has no stored room. */
-app.get(pu('/api/default-room'), (req, res) => {
+app.get(v1('/default-room'), (req, res) => {
   const ip = getClientIp(req)
   const seed = ip ? subnetSeedForLanRoom(ip) : 'unknown'
   res.json({ room: roomCodeFromSeed(seed) })
