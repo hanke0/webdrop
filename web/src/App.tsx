@@ -171,8 +171,7 @@ export default function Home() {
 
   const handleChatMessage = useCallback(
     (conn: Connection, msg: { name: string; payload: string }) => {
-      const line = msg.name ? `${msg.name}: ${msg.payload}` : msg.payload
-      appendChatLine(conn.id, false, line)
+      appendChatLine(conn.id, false, msg.payload)
     },
     [appendChatLine]
   )
