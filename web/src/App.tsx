@@ -229,6 +229,7 @@ export default function Home() {
         .filter((c) => c.id !== peer.id)
       resetRoomUsers(pending)
     } catch {
+      /* fetchRoomUsers already toasts HTTP / parse errors */
     } finally {
       window.setTimeout(() => setListRefreshBusy(false), 400)
     }

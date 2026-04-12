@@ -11,6 +11,7 @@
     "dev": "npm run dev -w @webdrop/web",
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint web server eslint.config.ts --max-warnings 0",
+    "test": "npm run test -w @webdrop/web",
     "fmt": "npm run lint -- --fix",
     "build-server": "npm run build -w @webdrop/server",
     "serve-dev": "./scripts/serve-dev.sh"
