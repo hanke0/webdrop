@@ -1,5 +1,6 @@
 import { getUserShowName, splitRoomAndUser } from '../room'
 import toast from 'react-hot-toast'
+import i18n from '../../i18n'
 import fileDownload from 'js-file-download'
 import { fromString, toString } from 'uint8arrays'
 import {
@@ -104,7 +105,7 @@ export class Connection {
       return true
     }
     if (!this.chOpen()) {
-      toast.error(`connection to ${this.id} is not open`)
+      toast.error(i18n.t('conn.notOpen', { id: this.id }))
       return false
     }
     const inviteId = crypto.randomUUID()
@@ -141,7 +142,7 @@ export class Connection {
       return
     }
     if (!this.chatAccepted) {
-      toast.error('对方尚未接受文字聊天')
+      toast.error(i18n.t('conn.chatNotAccepted'))
       return
     }
     const name = getUserShowName(this.p2p.id)
@@ -391,7 +392,7 @@ export class Connection {
   private async sendJson(obj: unknown): Promise<void> {
     const ch = this.channel
     if (!ch || !this.chOpen()) {
-      toast.error(`connection to ${this.id} is not open`)
+      toast.error(i18n.t('conn.notOpen', { id: this.id }))
       return
     }
     await writeDcFrame(ch, FRAME_JSON, fromString(JSON.stringify(obj)))
@@ -399,7 +400,7 @@ export class Connection {
 
   async sendFileWithConsent(file: File, timeoutMs = 300_000): Promise<void> {
     if (!this.chOpen()) {
-      toast.error(`connection to ${this.id} is not open`)
+      toast.error(i18n.t('conn.notOpen', { id: this.id }))
       throw new Error('connection not open')
     }
     const ch = this.channel!
@@ -445,7 +446,7 @@ export class Connection {
 
   send(data: WireData) {
     if (!this.chOpen()) {
-      toast.error(`connection to ${this.id} is not open`)
+      toast.error(i18n.t('conn.notOpen', { id: this.id }))
       return
     }
     void this.sendJson(data)

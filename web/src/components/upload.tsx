@@ -1,5 +1,6 @@
 import useDragging from '../hooks/useDragging'
 import { useId, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type UploadProps = {
   callback: (file: File) => void
@@ -9,6 +10,7 @@ type UploadProps = {
 }
 
 export function Upload(props: UploadProps) {
+  const { t } = useTranslation()
   const id = useId()
   const labelRef = useRef<HTMLLabelElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -22,8 +24,10 @@ export function Upload(props: UploadProps) {
 
   const content = props.children || (
     <>
-      <span className="font-semibold text-[var(--wd-text)]">点击选择</span>
-      <span className="text-[var(--wd-muted)]"> 或拖入文件</span>
+      <span className="font-semibold text-[var(--wd-text)]">
+        {t('upload.clickSelect')}
+      </span>
+      <span className="text-[var(--wd-muted)]">{t('upload.orDrag')}</span>
     </>
   )
 
@@ -61,7 +65,7 @@ export function Upload(props: UploadProps) {
           <p className="text-sm text-[var(--wd-muted)]">
             {dragging ? (
               <span className="font-semibold text-[var(--wd-accent)]">
-                松开以上传
+                {t('upload.releaseToUpload')}
               </span>
             ) : (
               content

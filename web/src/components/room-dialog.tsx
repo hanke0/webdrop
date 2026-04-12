@@ -4,6 +4,7 @@ import { getRoomURL, isGoodRoom } from '../lib/room'
 import QRCodeImport from 'react-qr-code'
 import { toast } from 'react-hot-toast'
 import { ComponentType, RefObject, SVGProps, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type QRCodeProps = { value: string; size?: number } & SVGProps<SVGSVGElement>
 
@@ -21,9 +22,10 @@ export type RoomDialogProps = {
 }
 
 export const RoomDialog = (props: RoomDialogProps) => {
+  const { t } = useTranslation()
   const onFull = (code: string) => {
     if (!isGoodRoom(code)) {
-      toast.error('Invalid room code')
+      toast.error(t('room.invalidCode'))
       return
     }
     window.location.replace(getRoomURL(code))
@@ -33,10 +35,10 @@ export const RoomDialog = (props: RoomDialogProps) => {
   return (
     <Dialog open={props.open} onClose={props.onClose}>
       <h2 className="text-xl font-semibold text-[var(--wd-text)] pr-8">
-        房间与邀请
+        {t('room.title')}
       </h2>
       <p className="text-sm text-[var(--wd-muted)] mt-2 mb-4 text-left leading-relaxed">
-        修改下方房间码可切换房间；分享链接或二维码邀请他人加入。
+        {t('room.description')}
       </p>
       <CodeBox
         length={6}
@@ -54,23 +56,23 @@ export const RoomDialog = (props: RoomDialogProps) => {
           navigator.clipboard
             .writeText(roomUrl)
             .then(() => {
-              toast.success('房间链接已复制', {
+              toast.success(t('room.copySuccess'), {
                 icon: '📋',
                 id: 'copy-room-url',
               })
             })
             .catch(() => {
-              toast.error('复制链接失败', {
+              toast.error(t('room.copyFail'), {
                 icon: '📋',
                 id: 'copy-room-url',
               })
             })
         }}
       >
-        点击复制房间链接
+        {t('room.copyLink')}
       </button>
       <p className="text-xs text-[var(--wd-faint)] text-center mb-4">
-        也可让对方扫描下方二维码
+        {t('room.qrHint')}
       </p>
       <div className="rounded-xl bg-white p-4 w-fit mx-auto shadow-inner">
         <QRCode className="w-44 h-44" value={roomUrl} />

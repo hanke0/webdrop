@@ -3,6 +3,7 @@ import { ConnectionCallback, LazyConnection, P2P } from '../lib/p2p'
 import { resolveSessionRoom, resolveSessionUser } from '../lib/room'
 import { MutableRefObject, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import i18n from '../i18n'
 
 export function usePeer(
   addConnection: (conn: LazyConnection) => void,
@@ -45,7 +46,9 @@ export function usePeer(
           return
         }
         if (instance.err) {
-          toast.error(`peer error: ${instance.err.message}`)
+          toast.error(
+            i18n.t('hook.peerError', { message: instance.err.message })
+          )
           setPeer(null)
           return
         }
@@ -64,7 +67,7 @@ export function usePeer(
         setPeer(instance)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
-        toast.error(`peer error: ${msg}`)
+        toast.error(i18n.t('hook.peerError', { message: msg }))
         if (!cancelled) {
           setPeer(null)
         }

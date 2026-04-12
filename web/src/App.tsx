@@ -33,6 +33,8 @@ import { getUserShowName } from './lib/room'
 import { useUsers } from './hooks/useUsers'
 import { toast } from 'react-hot-toast'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitch } from './components/language-switch'
 
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
@@ -54,6 +56,7 @@ const sendFile = async (conn: Connection, file: File) => {
 }
 
 export default function Home() {
+  const { t } = useTranslation()
   const { users, addUser, removeUser, resetRoomUsers } = useUsers()
   const [incomingFile, setIncomingFile] = useState<IncomingFileOffer | null>(
     null
@@ -91,13 +94,13 @@ export default function Home() {
       respond: (accepted: boolean) => void
     ) => {
       if (incomingChatRef.current) {
-        toast.error('已有聊天请求待处理，无法接受文件')
+        toast.error(t('toast.chatPendingBlocksFile'))
         respond(false)
         return
       }
       setIncomingFile((prev) => {
         if (prev) {
-          toast.error('已有文件正在等待你的确认')
+          toast.error(t('toast.fileAwaitingConfirm'))
           respond(false)
           return prev
         }
@@ -110,7 +113,7 @@ export default function Home() {
         }
       })
     },
-    []
+    [t]
   )
 
   const chatInviteRef = useRef<
@@ -129,13 +132,13 @@ export default function Home() {
       respond: (accepted: boolean) => void
     ) => {
       if (incomingFileRef.current) {
-        toast.error('正在处理文件传输请求，无法接受聊天')
+        toast.error(t('toast.fileBlocksChat'))
         respond(false)
         return
       }
       setIncomingChat((prev) => {
         if (prev) {
-          toast.error('已有聊天或文件请求待处理')
+          toast.error(t('toast.pendingChatOrFile'))
           respond(false)
           return prev
         }
@@ -146,7 +149,7 @@ export default function Home() {
         }
       })
     },
-    []
+    [t]
   )
 
   const appendChatLine = useCallback(
@@ -195,7 +198,9 @@ export default function Home() {
       open: (conn: Connection) => addUser(conn),
       close: (conn: Connection) => removeUser(conn),
       error: (conn: Connection, err: Error) => {
-        toast.error(`Connection to ${conn.id} failed: ${err.message}`)
+        toast.error(
+          t('toast.connectionFailed', { id: conn.id, message: err.message })
+        )
         removeUser(conn)
       },
       get fileOffer() {
@@ -208,7 +213,7 @@ export default function Home() {
         return chatMessageRef.current
       },
     }),
-    [addUser, removeUser]
+    [addUser, removeUser, t]
   )
 
   const handleRefreshRoomUsers = useCallback(async () => {
@@ -247,11 +252,11 @@ export default function Home() {
 
   const handleConnectToUser = async (fullName: string) => {
     if (!peer) {
-      toast.error('Connect fail: peer is null')
+      toast.error(t('toast.connectPeerNull'))
       return
     }
     if (peer.isSelf(fullName)) {
-      toast.error('Connect fail: cannot connect to self')
+      toast.error(t('toast.connectSelf'))
       return
     }
 
@@ -260,9 +265,7 @@ export default function Home() {
       const data = await fetchRoomUsers(peer.room)
       const u = data.find((x) => x.id === id)
       if (!u) {
-        toast.error(
-          'That user is not online in this room — refresh the user list first'
-        )
+        toast.error(t('toast.userNotOnline'))
         return
       }
       peer.connect(fullName, u.addrs ?? [], outboundHandlers)
@@ -274,9 +277,10 @@ export default function Home() {
   const handleSendFileToPeer = async (conn: Connection, file: File) => {
     const name = getUserShowName(conn.id)
     toast.promise(sendFile(conn, file), {
-      loading: `正在向 ${name} 发送 ${file.name}…`,
-      success: `已发送 ${file.name} 给 ${name}`,
-      error: (err) => `发送失败: ${err}`,
+      loading: t('toast.sendFileLoading', { name, fileName: file.name }),
+      success: t('toast.sendFileSuccess', { name, fileName: file.name }),
+      error: (err) =>
+        t('toast.sendFileError', { message: String(err) }),
     })
   }
 
@@ -289,7 +293,7 @@ export default function Home() {
       return
     }
     if (!ok) {
-      toast.error('对方拒绝了聊天或未在规定时间内响应')
+      toast.error(t('toast.chatRejectedOrTimeout'))
       setPeerUi({ kind: 'menu', lazy })
       return
     }
@@ -356,10 +360,10 @@ export default function Home() {
         <div className="wd-stagger flex w-full flex-col gap-4">
           <header className="text-center space-y-1 px-1">
             <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--wd-muted)] font-semibold">
-              点对点 · 安全直连
+              {t('app.tagline')}
             </p>
             <h1 className="text-[1.75rem] sm:text-[2rem] font-semibold tracking-tight text-[var(--wd-text)]">
-              Web Drop
+              {t('app.title')}
             </h1>
           </header>
 
@@ -371,18 +375,20 @@ export default function Home() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="text-left">
                 <p className="text-xs font-medium text-[var(--wd-muted)]">
-                  在线成员
+                  {t('app.onlineMembers')}
                 </p>
                 <p className="mt-0.5 flex items-baseline gap-2">
                   <span className="text-2xl font-semibold tabular-nums text-[var(--wd-text)]">
                     {users.length}
                   </span>
-                  <span className="text-sm text-[var(--wd-muted)]">人</span>
+                  <span className="text-sm text-[var(--wd-muted)]">
+                    {t('app.peopleUnit')}
+                  </span>
                 </p>
               </div>
               <button
                 type="button"
-                aria-label="刷新在线列表"
+                aria-label={t('app.refreshListAria')}
                 disabled={listRefreshBusy}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wd-border)] bg-[var(--wd-surface)] text-[var(--wd-accent)] hover:bg-[var(--wd-surface-hover)] transition-all duration-200 active:scale-95 disabled:opacity-50"
                 onClick={() => void handleRefreshRoomUsers()}
@@ -398,11 +404,11 @@ export default function Home() {
 
             <div className="text-left">
               <p className="text-xs text-[var(--wd-muted)] mb-2 font-medium">
-                按显示名连接对方
+                {t('app.connectByNameHint')}
               </p>
               <InputBox
-                placeholder="对方在房间里的名字"
-                buttonText="连接"
+                placeholder={t('app.connectPlaceholder')}
+                buttonText={t('app.connectButton')}
                 onSubmit={(id) => handleConnectToUser(id)}
                 autoComplete="off"
               />
@@ -410,11 +416,11 @@ export default function Home() {
 
             <div className="rounded-xl border border-[var(--wd-border)] bg-[var(--wd-surface-muted)] p-3 min-h-[7rem]">
               <p className="text-[11px] uppercase tracking-wider text-[var(--wd-muted)] font-semibold mb-3 px-1 text-left">
-                点击头像 · 发文件或聊天
+                {t('app.peerListHint')}
               </p>
               {users.length === 0 ? (
                 <p className="text-center text-sm text-[var(--wd-muted)] py-8 px-2 leading-relaxed">
-                  还没有其他成员。可先点右上角刷新，或分享房间码邀请对方加入。
+                  {t('app.emptyPeerList')}
                 </p>
               ) : (
                 <List
@@ -430,6 +436,8 @@ export default function Home() {
               )}
             </div>
           </Card>
+
+          <LanguageSwitch className="mt-8 opacity-80" />
         </div>
       </Main>
     </>

@@ -1,3 +1,4 @@
+import './i18n.ts'
 import App from './App.tsx'
 import CloseableToast from './components/closable-toast.tsx'
 import ReactDOM from 'react-dom/client'

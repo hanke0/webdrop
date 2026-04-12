@@ -1,6 +1,8 @@
 import { ToastBar, Toaster, toast } from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 export default function ClosableToast() {
+  const { t } = useTranslation()
   return (
     <Toaster
       toastOptions={{
@@ -8,16 +10,16 @@ export default function ClosableToast() {
         duration: 4000,
       }}
     >
-      {(t) => (
-        <ToastBar toast={t}>
+      {(toastItem) => (
+        <ToastBar toast={toastItem}>
           {({ icon, message }) => (
             <>
               {icon}
               {message}
               <button
                 type="button"
-                aria-label="关闭"
-                onClick={() => toast.dismiss(t.id)}
+                aria-label={t('a11y.closeToast')}
+                onClick={() => toast.dismiss(toastItem.id)}
                 className="ml-1 shrink-0 rounded-lg p-1.5 text-[var(--wd-muted)] hover:bg-[var(--wd-surface-hover)] hover:text-[var(--wd-text)] transition-colors duration-200"
               >
                 <svg

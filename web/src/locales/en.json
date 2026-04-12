@@ -1,0 +1,123 @@
+{
+  "app": {
+    "tagline": "Peer-to-peer · direct & private",
+    "title": "Web Drop",
+    "onlineMembers": "Online",
+    "peopleUnit": "members",
+    "refreshListAria": "Refresh online list",
+    "connectByNameHint": "Connect using their display name",
+    "connectPlaceholder": "Their name in this room",
+    "connectButton": "Connect",
+    "peerListHint": "Tap an avatar · send files or chat",
+    "emptyPeerList": "No one else here yet. Try refresh (top right) or share the room code to invite others."
+  },
+  "language": {
+    "en": "English",
+    "zh": "中文",
+    "switch": "Language"
+  },
+  "toast": {
+    "chatPendingBlocksFile": "A chat request is already pending; cannot accept the file.",
+    "fileAwaitingConfirm": "A file is already waiting for your confirmation.",
+    "fileBlocksChat": "Handling a file transfer; cannot accept chat.",
+    "pendingChatOrFile": "Another chat or file request is already pending.",
+    "connectionFailed": "Connection to {{id}} failed: {{message}}",
+    "connectPeerNull": "Connect failed: session not ready.",
+    "connectSelf": "Connect failed: cannot connect to yourself.",
+    "userNotOnline": "That user is not online in this room — refresh the list first.",
+    "sendFileLoading": "Sending {{fileName}} to {{name}}…",
+    "sendFileSuccess": "Sent {{fileName}} to {{name}}",
+    "sendFileError": "Send failed: {{message}}",
+    "chatRejectedOrTimeout": "They declined the chat or did not respond in time."
+  },
+  "peer": {
+    "pickFile": "Choose a file",
+    "sendFailed": "Send failed: {{message}}",
+    "with": "With {{name}}",
+    "chooseAction": "Choose an action",
+    "sendFile": "Send file",
+    "textChat": "Text chat",
+    "sendTo": "Send to {{name}}",
+    "pickFileHint": "Pick a local file; transfer starts after they accept.",
+    "sending": "Sending…",
+    "send": "Send",
+    "back": "Back",
+    "waitingChatInvite": "Waiting for {{name}} to accept the chat invite…",
+    "chatWith": "Chat with {{name}}",
+    "noMessages": "No messages yet. Type below to start.",
+    "chatPlaceholder": "Message — Enter to send · Shift+Enter for newline",
+    "sendMessage": "Send"
+  },
+  "upload": {
+    "clickSelect": "Click to choose",
+    "orDrag": " or drag a file here",
+    "releaseToUpload": "Release to upload"
+  },
+  "fileRecv": {
+    "title": "Incoming file",
+    "from": "From {{name}}",
+    "hint": "After you accept, the file downloads to your device.",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "chatInv": {
+    "title": "Chat invite",
+    "from": "From {{name}}",
+    "hint": "After you accept, you can text chat over this connection.",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "room": {
+    "title": "Room & invite",
+    "description": "Change the room code below to switch rooms; share the link or QR code to invite others.",
+    "copyLink": "Copy room link",
+    "copySuccess": "Room link copied",
+    "copyFail": "Could not copy link",
+    "qrHint": "Or let them scan the QR code below",
+    "invalidCode": "Invalid room code"
+  },
+  "user": {
+    "identity": "You",
+    "roomHintBefore": "People in the same room can send you files. Room code ",
+    "roomHintAfter": "",
+    "copySuccess": "Full username copied",
+    "copyFail": "Copy failed"
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "reload": "Reload"
+  },
+  "loadingPage": {
+    "title": "Connecting…",
+    "subtitle": "Setting up the room and peer channel",
+    "reload": "Reload"
+  },
+  "a11y": {
+    "closeToast": "Dismiss"
+  },
+  "api": {
+    "httpError": "{{operation}} failed ({{status}}){{statusText}}",
+    "networkError": "{{operation}} failed: {{message}}",
+    "presenceHttp": "Presence update failed ({{status}}){{statusText}}",
+    "presenceNetwork": "Presence update failed: {{message}}",
+    "defaultRoomInvalidJson": "Default room: invalid response from server",
+    "defaultRoomNoCode": "Default room: server did not return a room code",
+    "opDefaultRoom": "Default room",
+    "opRoomUsers": "Room user list",
+    "opRoomUsersParse": "Room user list (parse response)"
+  },
+  "conn": {
+    "notOpen": "Connection to {{id}} is not open",
+    "chatNotAccepted": "Text chat is not active with this peer yet"
+  },
+  "hook": {
+    "peerError": "Peer error: {{message}}"
+  },
+  "fileSend": {
+    "sendFail": "Send file failed: {{message}}",
+    "noFile": "No file selected",
+    "sendTo": "Send to {{name}}",
+    "sending": "Sending…",
+    "send": "Send"
+  }
+}

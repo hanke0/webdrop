@@ -1,0 +1,123 @@
+{
+  "app": {
+    "tagline": "点对点 · 安全直连",
+    "title": "Web Drop",
+    "onlineMembers": "在线成员",
+    "peopleUnit": "人",
+    "refreshListAria": "刷新在线列表",
+    "connectByNameHint": "按显示名连接对方",
+    "connectPlaceholder": "对方在房间里的名字",
+    "connectButton": "连接",
+    "peerListHint": "点击头像 · 发文件或聊天",
+    "emptyPeerList": "还没有其他成员。可先点右上角刷新，或分享房间码邀请对方加入。"
+  },
+  "language": {
+    "en": "English",
+    "zh": "中文",
+    "switch": "语言"
+  },
+  "toast": {
+    "chatPendingBlocksFile": "已有聊天请求待处理，无法接受文件",
+    "fileAwaitingConfirm": "已有文件正在等待你的确认",
+    "fileBlocksChat": "正在处理文件传输请求，无法接受聊天",
+    "pendingChatOrFile": "已有聊天或文件请求待处理",
+    "connectionFailed": "与 {{id}} 的连接失败：{{message}}",
+    "connectPeerNull": "连接失败：会话未就绪",
+    "connectSelf": "连接失败：不能连接自己",
+    "userNotOnline": "该用户不在此房间在线 — 请先刷新成员列表",
+    "sendFileLoading": "正在向 {{name}} 发送 {{fileName}}…",
+    "sendFileSuccess": "已发送 {{fileName}} 给 {{name}}",
+    "sendFileError": "发送失败：{{message}}",
+    "chatRejectedOrTimeout": "对方拒绝了聊天或未在规定时间内响应"
+  },
+  "peer": {
+    "pickFile": "请选择文件",
+    "sendFailed": "发送失败：{{message}}",
+    "with": "与 {{name}}",
+    "chooseAction": "选择一项操作",
+    "sendFile": "发送文件",
+    "textChat": "文字聊天",
+    "sendTo": "发送给 {{name}}",
+    "pickFileHint": "选择本地文件，对方确认后开始传输",
+    "sending": "发送中…",
+    "send": "发送",
+    "back": "返回",
+    "waitingChatInvite": "正在等待 {{name}} 接受聊天邀请…",
+    "chatWith": "与 {{name}} 聊天",
+    "noMessages": "暂无消息，在下方输入开始对话。",
+    "chatPlaceholder": "输入消息，Enter 发送 · Shift+Enter 换行",
+    "sendMessage": "发送"
+  },
+  "upload": {
+    "clickSelect": "点击选择",
+    "orDrag": " 或拖入文件",
+    "releaseToUpload": "松开以上传"
+  },
+  "fileRecv": {
+    "title": "收到文件",
+    "from": "来自 {{name}}",
+    "hint": "接受后文件将下载到你的设备。",
+    "accept": "接受",
+    "decline": "拒绝"
+  },
+  "chatInv": {
+    "title": "聊天邀请",
+    "from": "来自 {{name}}",
+    "hint": "接受后可通过当前连接与对方文字聊天。",
+    "accept": "接受",
+    "decline": "拒绝"
+  },
+  "room": {
+    "title": "房间与邀请",
+    "description": "修改下方房间码可切换房间；分享链接或二维码邀请他人加入。",
+    "copyLink": "点击复制房间链接",
+    "copySuccess": "房间链接已复制",
+    "copyFail": "复制链接失败",
+    "qrHint": "也可让对方扫描下方二维码",
+    "invalidCode": "房间码无效"
+  },
+  "user": {
+    "identity": "当前身份",
+    "roomHintBefore": "同房间的人可以向你发文件。房间码 ",
+    "roomHintAfter": "",
+    "copySuccess": "已复制完整用户名",
+    "copyFail": "复制失败"
+  },
+  "errorPage": {
+    "title": "出错了",
+    "reload": "重新加载"
+  },
+  "loadingPage": {
+    "title": "正在连接…",
+    "subtitle": "建立房间与点对点通道",
+    "reload": "重新加载"
+  },
+  "a11y": {
+    "closeToast": "关闭"
+  },
+  "api": {
+    "httpError": "{{operation}}失败（{{status}}）{{statusText}}",
+    "networkError": "{{operation}}失败：{{message}}",
+    "presenceHttp": "在线状态更新失败（{{status}}）{{statusText}}",
+    "presenceNetwork": "在线状态更新失败：{{message}}",
+    "defaultRoomInvalidJson": "默认房间：服务器返回无效数据",
+    "defaultRoomNoCode": "默认房间：服务器未返回房间码",
+    "opDefaultRoom": "默认房间",
+    "opRoomUsers": "房间成员列表",
+    "opRoomUsersParse": "房间成员列表（解析响应）"
+  },
+  "conn": {
+    "notOpen": "与 {{id}} 的连接未打开",
+    "chatNotAccepted": "对方尚未接受文字聊天"
+  },
+  "hook": {
+    "peerError": "连接错误：{{message}}"
+  },
+  "fileSend": {
+    "sendFail": "发送文件失败：{{message}}",
+    "noFile": "未选择文件",
+    "sendTo": "发送给 {{name}}",
+    "sending": "发送中…",
+    "send": "发送"
+  }
+}

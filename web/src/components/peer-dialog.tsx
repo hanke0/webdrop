@@ -6,6 +6,7 @@ import { Connection, LazyConnection, P2P } from '../lib/p2p'
 import { LoadingIcon } from './loading-icon'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 export type PeerDialogState =
   | null
@@ -29,6 +30,7 @@ export type PeerDialogProps = {
 }
 
 export function PeerDialog(props: PeerDialogProps) {
+  const { t } = useTranslation()
   const {
     state,
     peer,
@@ -63,7 +65,7 @@ export function PeerDialog(props: PeerDialogProps) {
       return
     }
     if (!file || state?.kind !== 'file') {
-      toast.error('请选择文件')
+      toast.error(t('peer.pickFile'))
       return
     }
     const conn = state.lazy.getReal(peer)
@@ -73,7 +75,7 @@ export function PeerDialog(props: PeerDialogProps) {
       setFile(null)
       handleDialogClose()
     } catch (err) {
-      toast.error(`发送失败: ${err}`)
+      toast.error(t('peer.sendFailed', { message: String(err) }))
     }
     setSendingFile(false)
   }
@@ -87,10 +89,10 @@ export function PeerDialog(props: PeerDialogProps) {
       {state.kind === 'menu' && (
         <>
           <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
-            与 {name}
+            {t('peer.with', { name })}
           </h3>
           <p className="text-sm text-[var(--wd-muted)] pb-4 pt-1">
-            选择一项操作
+            {t('peer.chooseAction')}
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -100,7 +102,7 @@ export function PeerDialog(props: PeerDialogProps) {
                 onStateChange({ kind: 'file', lazy: state.lazy })
               }
             >
-              发送文件
+              {t('peer.sendFile')}
             </Button>
             <Button
               variant="secondary"
@@ -109,7 +111,7 @@ export function PeerDialog(props: PeerDialogProps) {
                 void onStartChat(state.lazy)
               }}
             >
-              文字聊天
+              {t('peer.textChat')}
             </Button>
           </div>
         </>
@@ -118,10 +120,10 @@ export function PeerDialog(props: PeerDialogProps) {
       {state.kind === 'file' && (
         <>
           <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
-            发送给 {name}
+            {t('peer.sendTo', { name })}
           </h3>
           <p className="text-xs text-[var(--wd-muted)] pt-1 pb-3">
-            选择本地文件，对方确认后开始传输
+            {t('peer.pickFileHint')}
           </p>
           <Upload callback={(f) => setFile(f)}>
             {file && (
@@ -135,9 +137,9 @@ export function PeerDialog(props: PeerDialogProps) {
               variant="primary"
               className="w-full"
               handleClick={handleSendFileClick}
-              cancelContent={{ txt: '发送中…', state: sendingFile }}
+              cancelContent={{ txt: t('peer.sending'), state: sendingFile }}
             >
-              发送
+              {t('peer.send')}
             </Button>
             <Button
               variant="ghost"
@@ -146,7 +148,7 @@ export function PeerDialog(props: PeerDialogProps) {
                 onStateChange({ kind: 'menu', lazy: state.lazy })
               }
             >
-              返回
+              {t('peer.back')}
             </Button>
           </div>
         </>
@@ -156,7 +158,7 @@ export function PeerDialog(props: PeerDialogProps) {
         <div className="py-10 flex flex-col items-center gap-4 text-[var(--wd-muted)]">
           <LoadingIcon className="w-9 h-9" />
           <p className="text-sm text-center leading-relaxed">
-            正在等待 {name} 接受聊天邀请…
+            {t('peer.waitingChatInvite', { name })}
           </p>
         </div>
       )}
@@ -164,12 +166,12 @@ export function PeerDialog(props: PeerDialogProps) {
       {state.kind === 'chat' && (
         <>
           <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
-            与 {name} 聊天
+            {t('peer.chatWith', { name })}
           </h3>
           <div className="h-56 overflow-y-auto text-left border border-[var(--wd-border)] rounded-xl p-3 mb-3 bg-[var(--wd-input-bg)] mt-2">
             {lines.length === 0 && (
               <p className="text-[var(--wd-muted)] text-sm">
-                暂无消息，在下方输入开始对话。
+                {t('peer.noMessages')}
               </p>
             )}
             {lines.map((line) => (
@@ -200,7 +202,7 @@ export function PeerDialog(props: PeerDialogProps) {
           >
             <textarea
               className="flex-1 min-h-[4.5rem] p-3 text-sm text-[var(--wd-text)] placeholder:text-[var(--wd-faint)] bg-[var(--wd-input-bg)] border border-[var(--wd-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--wd-accent-glow)] focus:border-[color-mix(in_oklab,var(--wd-accent)_45%,var(--wd-border))] resize-y transition-[box-shadow,border-color] duration-200"
-              placeholder="输入消息，Enter 发送 · Shift+Enter 换行"
+              placeholder={t('peer.chatPlaceholder')}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -215,7 +217,7 @@ export function PeerDialog(props: PeerDialogProps) {
               }}
             />
             <Button type="submit" variant="primary" className="sm:w-auto w-full shrink-0">
-              发送
+              {t('peer.sendMessage')}
             </Button>
           </form>
         </>

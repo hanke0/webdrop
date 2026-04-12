@@ -4,6 +4,7 @@ import { Button } from './button'
 import { getUserShowName } from '../lib/room'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 export type FileSendDialogProps = {
   handleSendFile: (file: File) => Promise<void>
@@ -13,6 +14,7 @@ export type FileSendDialogProps = {
 }
 
 export function FileSendDialog(props: FileSendDialogProps) {
+  const { t } = useTranslation()
   const [file, setFile] = useState(null as File | null)
   const [sending, setSending] = useState(false)
   const name = getUserShowName(props.uid)
@@ -28,11 +30,11 @@ export function FileSendDialog(props: FileSendDialogProps) {
         await props.handleSendFile(file)
         setFile(null)
       } catch (err) {
-        toast.error(`Send file fail: ${err}`)
+        toast.error(t('fileSend.sendFail', { message: String(err) }))
       }
       setSending(false)
     } else {
-      toast.error('No file selected')
+      toast.error(t('fileSend.noFile'))
     }
   }
 
@@ -46,7 +48,7 @@ export function FileSendDialog(props: FileSendDialogProps) {
       }}
     >
       <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
-        发送给 {name}
+        {t('fileSend.sendTo', { name })}
       </h3>
       <Upload callback={(file) => setFile(file)}>
         {file && (
@@ -57,9 +59,9 @@ export function FileSendDialog(props: FileSendDialogProps) {
         variant="primary"
         className="w-full mt-4"
         handleClick={handleClick}
-        cancelContent={{ txt: '发送中…', state: sending }}
+        cancelContent={{ txt: t('fileSend.sending'), state: sending }}
       >
-        发送
+        {t('fileSend.send')}
       </Button>
     </Dialog>
   )

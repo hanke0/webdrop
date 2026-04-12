@@ -4,22 +4,39 @@
  */
 
 import toast from 'react-hot-toast'
+import i18n from '../i18n'
 
 const API_V1_PREFIX = '/api/v1'
 
-function toastHttpError(label: string, res: Response): void {
-  const tail = res.statusText ? ` ${res.statusText}` : ''
-  toast.error(`${label} failed (${res.status})${tail}`)
+function toastHttpError(operationKey: string, res: Response): void {
+  const statusText = res.statusText ? ` ${res.statusText}` : ''
+  toast.error(
+    i18n.t('api.httpError', {
+      operation: i18n.t(operationKey),
+      status: res.status,
+      statusText,
+    })
+  )
 }
 
 function toastPresenceHttpError(res: Response): void {
-  const tail = res.statusText ? ` ${res.statusText}` : ''
-  toastPresenceError(`Presence update failed (${res.status})${tail}`)
+  const statusText = res.statusText ? ` ${res.statusText}` : ''
+  toastPresenceError(
+    i18n.t('api.presenceHttp', {
+      status: res.status,
+      statusText,
+    })
+  )
 }
 
-function toastNetworkError(label: string, err: unknown): void {
-  const msg = err instanceof Error ? err.message : String(err)
-  toast.error(`${label} failed: ${msg}`)
+function toastNetworkError(operationKey: string, err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err)
+  toast.error(
+    i18n.t('api.networkError', {
+      operation: i18n.t(operationKey),
+      message,
+    })
+  )
 }
 
 let lastPresenceErrorToastAt = 0
@@ -74,23 +91,23 @@ export async function fetchDefaultRoom(): Promise<{ room: string } | null> {
   try {
     const res = await fetch(defaultRoomUrl())
     if (!res.ok) {
-      toastHttpError('Default room', res)
+      toastHttpError('api.opDefaultRoom', res)
       return null
     }
     let data: { room?: string }
     try {
       data = (await res.json()) as { room?: string }
     } catch {
-      toast.error('Default room: invalid response from server')
+      toast.error(i18n.t('api.defaultRoomInvalidJson'))
       return null
     }
     if (typeof data.room === 'string') {
       return { room: data.room }
     }
-    toast.error('Default room: server did not return a room code')
+    toast.error(i18n.t('api.defaultRoomNoCode'))
     return null
   } catch (e) {
-    toastNetworkError('Default room', e)
+    toastNetworkError('api.opDefaultRoom', e)
     return null
   }
 }
@@ -103,17 +120,17 @@ export async function fetchRoomUsers(
   try {
     res = await fetch(roomUsersUrl(room))
   } catch (e) {
-    toastNetworkError('Room user list', e)
+    toastNetworkError('api.opRoomUsers', e)
     throw e
   }
   if (!res.ok) {
-    toastHttpError('Room user list', res)
+    toastHttpError('api.opRoomUsers', res)
     throw new Error(`Room user list failed (${res.status})`)
   }
   try {
     return (await res.json()) as RoomUserListItem[]
   } catch (e) {
-    toastNetworkError('Room user list (parse response)', e)
+    toastNetworkError('api.opRoomUsersParse', e)
     throw new Error('Room user list: invalid JSON from server')
   }
 }
@@ -137,7 +154,9 @@ export async function postRoomPresence(
   } catch (e) {
     console.warn('presence POST error:', e)
     toastPresenceError(
-      e instanceof Error ? e.message : `Presence update failed: ${String(e)}`
+      i18n.t('api.presenceNetwork', {
+        message: e instanceof Error ? e.message : String(e),
+      })
     )
   }
 }
