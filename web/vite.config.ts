@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 import generateFile from 'vite-plugin-generate-file'
+import tailwindcss from '@tailwindcss/vite'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -39,6 +40,7 @@ export default defineConfig(({ mode }) => {
     envPrefix: 'WEB_DROP_',
     plugins: [
       react(),
+      tailwindcss(),
       generateFile({ output: './manifest.json', data: manifest }),
     ],
   }
