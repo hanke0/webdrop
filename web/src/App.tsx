@@ -66,6 +66,11 @@ export default function Home() {
     incomingFileRef.current = incomingFile
   }, [incomingFile])
 
+  const peerUiRef = useRef(peerUi)
+  useEffect(() => {
+    peerUiRef.current = peerUi
+  }, [peerUi])
+
   const fileOfferRef = useRef<
     | ((
         conn: PeerLink,
@@ -122,8 +127,25 @@ export default function Home() {
   const handleChatMessage = useCallback(
     (conn: PeerLink, msg: { name: string; payload: string }) => {
       appendChatLine(conn.id, false, msg.payload)
+      const current = peerUiRef.current
+      if (current?.kind === 'chat' && current.peerId === conn.id) {
+        return
+      }
+      if (current === null && incomingFileRef.current === null) {
+        setPeerUi({ kind: 'chat', conn, peerId: conn.id })
+        return
+      }
+      toast(
+        t('toast.chatReceived', {
+          name: msg.name,
+          preview: msg.payload.length > 60
+            ? `${msg.payload.slice(0, 60)}…`
+            : msg.payload,
+        }),
+        { icon: '💬', duration: 5000 }
+      )
     },
-    [appendChatLine]
+    [appendChatLine, t]
   )
 
   useEffect(() => {

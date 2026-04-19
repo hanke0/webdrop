@@ -28,6 +28,7 @@
     "sendFileLoading": "正在向 {{name}} 发送 {{fileName}}…",
     "sendFileSuccess": "已发送 {{fileName}} 给 {{name}}",
     "sendFileError": "发送失败：{{message}}",
+    "chatReceived": "{{name}}：{{preview}}",
     "chatRejectedOrTimeout": "对方拒绝了聊天或未在规定时间内响应"
   },
   "peer": {

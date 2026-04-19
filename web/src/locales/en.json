@@ -28,6 +28,7 @@
     "sendFileLoading": "Sending {{fileName}} to {{name}}…",
     "sendFileSuccess": "Sent {{fileName}} to {{name}}",
     "sendFileError": "Send failed: {{message}}",
+    "chatReceived": "{{name}}: {{preview}}",
     "chatRejectedOrTimeout": "They declined the chat or did not respond in time."
   },
   "peer": {
