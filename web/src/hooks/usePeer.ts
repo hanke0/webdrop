@@ -8,7 +8,7 @@ import type {
   PeerLinkCallback,
 } from '../lib/webrtc'
 import { LazyConnectionImpl, RoomSession } from '../lib/webrtc'
-import { resolveSessionRoom, resolveSessionUser } from '../lib/room'
+import { resolveRoomOverride, resolveSessionUser } from '../lib/room'
 
 export function usePeer(
   addConnection: (conn: LazyConnection) => void,
@@ -39,11 +39,8 @@ export function usePeer(
 
     ;(async () => {
       try {
-        const room = await resolveSessionRoom(search)
-        if (cancelled) {
-          return
-        }
         const user = resolveSessionUser(search)
+        const room = resolveRoomOverride(search) ?? undefined
         const instance = await RoomSession.create({ room, user }, inboundHandlers)
         if (cancelled) {
           instance.close()

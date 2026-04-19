@@ -96,17 +96,6 @@
   "a11y": {
     "closeToast": "Dismiss"
   },
-  "api": {
-    "httpError": "{{operation}} failed ({{status}}){{statusText}}",
-    "networkError": "{{operation}} failed: {{message}}",
-    "presenceHttp": "Presence update failed ({{status}}){{statusText}}",
-    "presenceNetwork": "Presence update failed: {{message}}",
-    "defaultRoomInvalidJson": "Default room: invalid response from server",
-    "defaultRoomNoCode": "Default room: server did not return a room code",
-    "opDefaultRoom": "Default room",
-    "opRoomUsers": "Room user list",
-    "opRoomUsersParse": "Room user list (parse response)"
-  },
   "conn": {
     "notOpen": "Connection to {{id}} is not open",
     "chatNotAccepted": "Text chat is not active with this peer yet"

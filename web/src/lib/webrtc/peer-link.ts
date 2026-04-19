@@ -11,6 +11,7 @@ import {
 } from './constants'
 import { sendBinaryChunks } from './dc-send'
 import { IceCandidatePipeline } from './ice-pipeline'
+import { attachPcLogging, candidateType, webrtcLog } from './log'
 import {
   clearPendingBooleanResponses,
   type PendingBooleanResponse,
@@ -208,10 +209,12 @@ export class PeerLink {
     offerSdp: RTCSessionDescriptionInit,
     cb: PeerLinkCallback
   ): Promise<PeerLink | null> {
+    const tag = `in ${signalPeerId}`
     const pc = new RTCPeerConnection(rtcConfig)
     session.trackPc(pc)
+    attachPcLogging(pc, tag)
 
-    const icePipe = new IceCandidatePipeline(pc, 'inbound')
+    const icePipe = new IceCandidatePipeline(pc, tag)
     const channelsPromise = waitForInboundChannels(pc)
 
     session.registerSignalHandler(signalPeerId, (body: SignalBody) => {
@@ -224,27 +227,41 @@ export class PeerLink {
 
     pc.onicecandidate = (ev) => {
       if (ev.candidate) {
+        webrtcLog(tag, 'local ice (typ)', candidateType(ev.candidate))
         session.sendSignal(signalPeerId, {
           type: 'ice',
           candidate: ev.candidate.toJSON(),
         })
+      } else {
+        webrtcLog(tag, 'local ice gathering complete')
       }
     }
 
     try {
+      webrtcLog(tag, 'applying remote offer')
       await pc.setRemoteDescription(new RTCSessionDescription(offerSdp))
-      const { ctrl, file } = await channelsPromise
       await icePipe.flushEarly()
 
       const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
+      webrtcLog(tag, 'answer created; sending')
       session.sendSignal(signalPeerId, {
         type: 'answer',
         sdp: pc.localDescription!,
       })
 
+      /*
+       * Chrome/WHATWG: the `datachannel` event on the answerer fires *after*
+       * setLocalDescription(answer), so we can only retrieve the channel
+       * objects now.
+       */
+      const { ctrl, file } = await channelsPromise
+      webrtcLog(tag, 'inbound data channels received')
+
       await Promise.all([waitForOpen(ctrl), waitForOpen(file)])
+      webrtcLog(tag, 'data channels open')
       await exchangeSessionReady(ctrl, session.id, signalPeerId)
+      webrtcLog(tag, 'session.ready exchanged')
 
       return new PeerLink(signalPeerId, session, cb, {
         pc,
@@ -253,7 +270,7 @@ export class PeerLink {
         signalPeerId,
       })
     } catch (e) {
-      console.warn('acceptOffer failed:', e)
+      console.warn(`[webrtc ${tag}] acceptOffer failed:`, e)
       session.unregisterSignalHandler(signalPeerId)
       pc.close()
       return null
@@ -262,10 +279,12 @@ export class PeerLink {
 
   private async openOutbound(): Promise<void> {
     const remotePeerId = this.id
+    const tag = `out ${remotePeerId}`
 
     const pc = new RTCPeerConnection(rtcConfig)
     this.pc = pc
     this.session.trackPc(pc)
+    attachPcLogging(pc, tag)
 
     const dcCtrl = pc.createDataChannel(CTRL_LABEL, { ordered: true })
     const dcFile = pc.createDataChannel(FILE_LABEL, { ordered: true })
@@ -273,16 +292,17 @@ export class PeerLink {
     this.ctrl = dcCtrl
     this.file = dcFile
 
-    const icePipe = new IceCandidatePipeline(pc, 'outbound')
+    const icePipe = new IceCandidatePipeline(pc, tag)
 
     this.session.registerSignalHandler(remotePeerId, (body: SignalBody) => {
       void (async () => {
         if (body.type === 'answer') {
           try {
+            webrtcLog(tag, 'answer received; applying')
             await pc.setRemoteDescription(new RTCSessionDescription(body.sdp))
             await icePipe.flushEarly()
           } catch (e) {
-            console.warn('setRemoteDescription answer:', e)
+            console.warn(`[webrtc ${tag}] setRemoteDescription answer:`, e)
           }
         } else if (body.type === 'ice') {
           icePipe.onSignalIce(body.candidate)
@@ -292,23 +312,29 @@ export class PeerLink {
 
     pc.onicecandidate = (ev) => {
       if (ev.candidate) {
+        webrtcLog(tag, 'local ice (typ)', candidateType(ev.candidate))
         this.session.sendSignal(remotePeerId, {
           type: 'ice',
           candidate: ev.candidate.toJSON(),
         })
+      } else {
+        webrtcLog(tag, 'local ice gathering complete')
       }
     }
 
     try {
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
+      webrtcLog(tag, 'offer created; sending')
       this.session.sendSignal(remotePeerId, {
         type: 'offer',
         sdp: pc.localDescription!,
       })
 
       await Promise.all([waitForOpen(dcCtrl), waitForOpen(dcFile)])
+      webrtcLog(tag, 'data channels open')
       await exchangeSessionReady(dcCtrl, this.session.id, remotePeerId)
+      webrtcLog(tag, 'session.ready exchanged')
 
       this.bindFileReceive()
       this.bindCtrlApp()

@@ -4,8 +4,9 @@
 
 **Webdrop** is a browser-based **peer-to-peer** application for **chat** and **file transfer**, built on **WebRTC** data channels.
 
-- **Server role:** The backend helps peers **find each other** and **exchange WebRTC signaling** (offer/answer, ICE candidates). It does **not** relay chat or file payloads after peers are connected over WebRTC.
+- **Server role:** One unified **WebSocket** (`/api/v2/ws`) brokers presence **and** WebRTC signaling. It does **not** relay chat or file payloads after peers are connected over WebRTC.
 - **Client role:** The SPA opens **RTCPeerConnection** instances with two **RTCDataChannels** (`webdrop-ctrl` for JSON control; `webdrop-file` for raw file bytes). Chat and file transfers run entirely **between browsers**.
+- **LAN-first WebRTC:** `iceServers` is empty, so only host (mDNS-masked) candidates are emitted — peers that can see each other on the LAN will connect; peers behind different NATs will not.
 
 All application code is **TypeScript** (`web/` and `server/`).
 
@@ -16,21 +17,29 @@ All application code is **TypeScript** (`web/` and `server/`).
 | Path | Purpose |
 |------|---------|
 | `web/` | React + Vite + Tailwind SPA; WebRTC stack under [`web/src/lib/webrtc/`](web/src/lib/webrtc/) (re-exported from [`web/src/lib/p2p.ts`](web/src/lib/p2p.ts) for stable imports). |
-| `server/` | Express HTTP API [`/api/v2`](server/server.ts): room presence, default room; WebSocket **`/api/v2/signal`** forwards versioned envelopes between peers in a room. |
+| `server/` | Express + unified WebSocket **`/api/v2/ws`** in [`server/server.ts`](server/server.ts); tracks presence purely via WS lifecycle, seeds the default room from `x-forwarded-for`, forwards signaling envelopes. |
 | Root `package.json` | npm **workspaces** (`web`, `server`); shared scripts (`dev`, `build`, `lint`, `test`) |
 
 ---
 
-## Protocol (v2, breaking)
+## Protocol (v3, breaking)
 
-**HTTP**
+**Unified WebSocket** — `GET /api/v2/ws?user=<adj-noun>[&room=<ABC123>]`
 
-- `POST /api/v2/room/:room/presence` — `{ "peerId": "ROOM-adj-adj-adj" }`
-- `GET /api/v2/room/:room/users` — `[{ "id": "<peerId>" }]`
-- `GET /api/v2/default-room` — `{ room }`
+- If `room` is omitted/invalid, the server derives one from the client's `x-forwarded-for` subnet (stable per LAN segment).
+- The server assigns `peerId = "${room}-${user}"`; duplicate usernames in a room close with code `4002`.
 
-**Signaling WebSocket** — `GET /api/v2/signal?room=&peerId=`  
-Client sends `{ "v": 2, "to": "<peerId>", "body": { "type": "offer" | "answer" | "ice", ... } }`; server forwards `{ "v": 2, "from": "<peerId>", "body": ... }`.
+Server frames:
+
+- `{ "type": "welcome", "room", "peerId", "peers": string[] }` — first message after accept.
+- `{ "type": "peer.join", "peerId": "<peerId>" }` / `{ "type": "peer.leave", ... }`
+- `{ "type": "peers", "peers": string[] }` — response to a client `{ "type": "peers" }` request.
+- `{ "type": "signal", "from": "<peerId>", "body": { "type": "offer"|"answer"|"ice", ... } }`
+
+Client frames:
+
+- `{ "type": "signal", "to": "<peerId>", "body": SignalBody }`
+- `{ "type": "peers" }` — ask for a fresh roster.
 
 **Data channels**
 
@@ -55,6 +64,6 @@ Server dev: `npm run dev -w @webdrop/server`. Production start after build: see 
 
 ## Conventions for agents editing this codebase
 
-1. **Respect the split:** signaling/presence on the server; chat and files on WebRTC unless the task changes that boundary.
-2. **Match patterns** in `web/src/lib/webrtc/` for signaling and peer links.
+1. **Respect the split:** presence + signaling on the unified WS; chat and files on WebRTC unless the task changes that boundary.
+2. **Match patterns** in `web/src/lib/webrtc/` for the `SignalLink`, `RoomSession`, and `PeerLink` layering.
 3. **Keep changes scoped** to the requested behavior.

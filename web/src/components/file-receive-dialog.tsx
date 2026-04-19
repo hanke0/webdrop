@@ -47,8 +47,8 @@ export function FileReceiveDialog(props: FileReceiveDialogProps) {
   }
 
   return (
-    <Dialog open={props.open} onClose={() => finish(false)}>
-      <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
+    <Dialog open={props.open} dismissible={false}>
+      <h3 className="text-lg font-semibold text-[var(--wd-text)]">
         {t('fileRecv.title')}
       </h3>
       {offer && (

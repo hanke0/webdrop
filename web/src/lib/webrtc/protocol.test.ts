@@ -18,7 +18,7 @@ describe('signalingClosedMessage', () => {
 
 describe('PROTOCOL_V', () => {
   it('matches server wire version', () => {
-    expect(PROTOCOL_V).toBe(2)
+    expect(PROTOCOL_V).toBe(3)
   })
 })
 

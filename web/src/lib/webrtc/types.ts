@@ -1,4 +1,4 @@
-/** WebRTC signaling payloads over WebSocket `body` (`/api/v2`). */
+/** WebRTC signaling payloads exchanged over the unified WebSocket `body` field. */
 export type SignalBody =
   | { type: 'offer'; sdp: RTCSessionDescriptionInit }
   | { type: 'answer'; sdp: RTCSessionDescriptionInit }
@@ -6,16 +6,16 @@ export type SignalBody =
 
 /** Control-channel JSON (`webdrop-ctrl`). */
 export type CtrlMessage =
-  | { v: 2; kind: 'session.ready'; peerId: string }
+  | { v: 3; kind: 'session.ready'; peerId: string }
   | {
-      v: 2
+      v: 3
       kind: 'chat'
       text: string
       messageId?: string
       fromName?: string
     }
   | {
-      v: 2
+      v: 3
       kind: 'file.offer'
       transferId: string
       name: string
@@ -23,15 +23,16 @@ export type CtrlMessage =
       mime: string
     }
   | {
-      v: 2
+      v: 3
       kind: 'file.answer'
       transferId: string
       accept: boolean
     }
-  | { v: 2; kind: 'file.done'; transferId: string }
+  | { v: 3; kind: 'file.done'; transferId: string }
 
 export type SessionOptions = {
-  room: string
+  /** Optional room override. If omitted the server derives one from the client IP. */
+  room?: string
   user: string
 }
 

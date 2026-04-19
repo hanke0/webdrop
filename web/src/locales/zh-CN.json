@@ -96,17 +96,6 @@
   "a11y": {
     "closeToast": "关闭"
   },
-  "api": {
-    "httpError": "{{operation}}失败（{{status}}）{{statusText}}",
-    "networkError": "{{operation}}失败：{{message}}",
-    "presenceHttp": "在线状态更新失败（{{status}}）{{statusText}}",
-    "presenceNetwork": "在线状态更新失败：{{message}}",
-    "defaultRoomInvalidJson": "默认房间：服务器返回无效数据",
-    "defaultRoomNoCode": "默认房间：服务器未返回房间码",
-    "opDefaultRoom": "默认房间",
-    "opRoomUsers": "房间成员列表",
-    "opRoomUsersParse": "房间成员列表（解析响应）"
-  },
   "conn": {
     "notOpen": "与 {{id}} 的连接未打开",
     "chatNotAccepted": "对方尚未接受文字聊天"

@@ -15,7 +15,6 @@ function lazyFromPeer(conn: PeerLink): LazyConnection {
 }
 import { usePeer } from './hooks/usePeer'
 import { Main } from './components/main'
-import { fetchRoomUsers } from './lib/api'
 import { UserText } from './components/user-text'
 import {
   FileReceiveDialog,
@@ -154,31 +153,38 @@ export default function Home() {
     [addUser, removeUser, t]
   )
 
-  const handleRefreshRoomUsers = useCallback(async () => {
+  const syncRoomUsers = useCallback(
+    (session: RoomSession, peerIds: string[]) => {
+      const pending = peerIds
+        .filter((id) => id !== session.id)
+        .map((id) => {
+          const builder = (p: RoomSession) =>
+            p.connect(id, outboundHandlers)
+          return new LazyConnectionImpl(id, builder)
+        })
+      resetRoomUsers(pending)
+    },
+    [outboundHandlers, resetRoomUsers]
+  )
+
+  useEffect(() => {
+    if (!peer || peer.err) {
+      return
+    }
+    const unsubscribe = peer.onPeers((list) => {
+      syncRoomUsers(peer, list)
+    })
+    return unsubscribe
+  }, [peer, syncRoomUsers])
+
+  const handleRefreshRoomUsers = useCallback(() => {
     if (!peer || peer.err) {
       return
     }
     setListRefreshBusy(true)
-    try {
-      const data = await fetchRoomUsers(peer.room)
-      const pending = data
-        .map((ele) => {
-          const id = ele.id
-          const builder = (p: RoomSession) => p.connect(id, outboundHandlers)
-          return new LazyConnectionImpl(id, builder)
-        })
-        .filter((c) => c.id !== peer.id)
-      resetRoomUsers(pending)
-    } catch {
-      /* fetchRoomUsers already toasts HTTP / parse errors */
-    } finally {
-      window.setTimeout(() => setListRefreshBusy(false), 400)
-    }
-  }, [peer, outboundHandlers, resetRoomUsers])
-
-  useEffect(() => {
-    void handleRefreshRoomUsers()
-  }, [handleRefreshRoomUsers])
+    peer.refreshPeers()
+    window.setTimeout(() => setListRefreshBusy(false), 400)
+  }, [peer])
 
   if (!peer) {
     return <LoadingPage />
@@ -187,7 +193,7 @@ export default function Home() {
     return <ErrorPage err={peer.err.message} />
   }
 
-  const handleConnectToUser = async (fullName: string) => {
+  const handleConnectToUser = (fullName: string) => {
     if (!peer) {
       toast.error(t('toast.connectPeerNull'))
       return
@@ -196,19 +202,12 @@ export default function Home() {
       toast.error(t('toast.connectSelf'))
       return
     }
-
     const id = peer.getPeerId(fullName)
-    try {
-      const data = await fetchRoomUsers(peer.room)
-      const u = data.find((x) => x.id === id)
-      if (!u) {
-        toast.error(t('toast.userNotOnline'))
-        return
-      }
-      peer.connect(fullName, outboundHandlers)
-    } catch {
-      /* fetchRoomUsers already toasts HTTP / parse errors */
+    if (!peer.roomPeers.includes(id)) {
+      toast.error(t('toast.userNotOnline'))
+      return
     }
+    peer.connect(fullName, outboundHandlers)
   }
 
   const handleSendFileToPeer = async (conn: PeerLink, file: File) => {
@@ -291,7 +290,7 @@ export default function Home() {
                 aria-label={t('app.refreshListAria')}
                 disabled={listRefreshBusy}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--wd-border)] bg-[var(--wd-surface)] text-[var(--wd-accent)] hover:bg-[var(--wd-surface-hover)] transition-all duration-200 active:scale-95 disabled:opacity-50"
-                onClick={() => void handleRefreshRoomUsers()}
+                onClick={handleRefreshRoomUsers}
               >
                 <Fresh
                   width={18}

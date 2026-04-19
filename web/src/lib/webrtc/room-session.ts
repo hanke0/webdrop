@@ -1,23 +1,24 @@
-import { splitRoomAndUser } from '../room'
-import { connectSignalingWebSocket, postRoomPresence } from '../api'
 import { resolvePeerId } from './connect-id'
-import { waitForSignalingWebSocket } from './signaling-ws'
+import { SignalLink } from './signaling-ws'
 import { PeerLink, type PeerLinkCallback } from './peer-link'
 import type { SessionRuntime } from './session-runtime'
-import type { SignalBody } from './types'
-import type { SessionOptions } from './types'
+import type { SessionOptions, SignalBody } from './types'
 
 export class RoomSession implements SessionRuntime {
   id: string
   err?: Error
   closed?: boolean
-  private presenceTimer?: ReturnType<typeof setInterval>
   private readonly inboundByPeer = new Map<string, PeerLink>()
   private readonly signalHandlers = new Map<string, (body: SignalBody) => void>()
   private readonly pcs = new Set<RTCPeerConnection>()
-  private ws: WebSocket | null = null
+  private readonly link: SignalLink
+  private readonly _room: string
+  private peers: Set<string>
+  private peersListeners = new Set<(peers: string[]) => void>()
+  private inboundCallback?: PeerLinkCallback
   private onOpenCb?: (id: string) => void
-  inboundCallback?: PeerLinkCallback
+  private onCloseCb?: () => void
+  private onDisconnectCb?: () => void
   private opened = false
 
   get ok() {
@@ -25,62 +26,88 @@ export class RoomSession implements SessionRuntime {
   }
 
   get room() {
-    const [room] = splitRoomAndUser(this.id)
-    return room || ''
+    return this._room
   }
 
-  get user() {
-    const [, user] = splitRoomAndUser(this.id)
-    return user || this.id
+  /** Snapshot of the other peers currently in the room (server-authoritative). */
+  get roomPeers(): string[] {
+    return [...this.peers]
   }
 
-  private constructor(peerId: string) {
-    this.id = peerId
+  private constructor(link: SignalLink) {
+    this.id = link.peerId
+    this.link = link
+    this._room = link.room
+    this.peers = new Set(link.initialPeers.filter((p) => p !== link.peerId))
   }
 
   static async create(
     options: SessionOptions,
     inboundCallback?: PeerLinkCallback
   ): Promise<RoomSession> {
-    const peerId = `${options.room}-${options.user}`
-    const instance = new RoomSession(peerId)
-    instance.inboundCallback = inboundCallback
+    let link: SignalLink
     try {
-      const ws = connectSignalingWebSocket(options.room, peerId)
-      instance.ws = ws
-      await waitForSignalingWebSocket(ws)
-      ws.onmessage = (ev) => {
-        let parsed: { v?: unknown; from?: unknown; body?: unknown }
-        try {
-          parsed = JSON.parse(ev.data as string) as {
-            v?: unknown
-            from?: unknown
-            body?: unknown
-          }
-        } catch {
-          return
-        }
-        if (parsed.v !== 2 || typeof parsed.from !== 'string') {
-          return
-        }
-        if (parsed.body === null || typeof parsed.body !== 'object') {
-          return
-        }
-        instance.routeSignal(parsed.from, parsed.body as SignalBody)
-      }
-      ws.onclose = () => {
-        if (!instance.closed) {
-          instance.closed = true
-        }
-      }
-      await instance.afterStart()
-      return instance
+      link = await SignalLink.open({
+        user: options.user,
+        room: options.room ?? null,
+      })
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e))
-      instance.err = err
-      instance.closed = true
-      instance.ws?.close()
-      return instance
+      const sentinel = Object.create(RoomSession.prototype) as RoomSession
+      sentinel.err = err
+      sentinel.closed = true
+      sentinel.id = ''
+      return sentinel
+    }
+
+    const instance = new RoomSession(link)
+    instance.inboundCallback = inboundCallback
+    instance.wireLink()
+    instance.opened = true
+    instance.onOpenCb?.(instance.id)
+    return instance
+  }
+
+  private wireLink(): void {
+    this.link.on('signal', (from, body) => {
+      this.routeSignal(from, body)
+    })
+    this.link.on('peerJoin', (peerId) => {
+      if (peerId === this.id) {
+        return
+      }
+      if (!this.peers.has(peerId)) {
+        this.peers.add(peerId)
+        this.emitPeers()
+      }
+    })
+    this.link.on('peerLeave', (peerId) => {
+      if (this.peers.delete(peerId)) {
+        this.emitPeers()
+      }
+      const inbound = this.inboundByPeer.get(peerId)
+      if (inbound) {
+        inbound.close()
+      }
+    })
+    this.link.on('peers', (list) => {
+      this.peers = new Set(list.filter((p) => p !== this.id))
+      this.emitPeers()
+    })
+    this.link.on('close', () => {
+      if (this.closed) {
+        return
+      }
+      this.closed = true
+      this.onDisconnectCb?.()
+      this.onCloseCb?.()
+    })
+  }
+
+  private emitPeers(): void {
+    const snapshot = this.roomPeers
+    for (const cb of this.peersListeners) {
+      cb(snapshot)
     }
   }
 
@@ -96,10 +123,7 @@ export class RoomSession implements SessionRuntime {
   }
 
   sendSignal(to: string, body: SignalBody): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return
-    }
-    this.ws.send(JSON.stringify({ v: 2, to, body }))
+    this.link.sendSignal(to, body)
   }
 
   registerSignalHandler(
@@ -151,32 +175,11 @@ export class RoomSession implements SessionRuntime {
     })
   }
 
-  private async afterStart(): Promise<void> {
-    try {
-      this.startPresence()
-      this.opened = true
-      this.onOpenCb?.(this.id)
-    } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e))
-      this.err = err
-      this.closed = true
-      this.ws?.close()
-    }
-  }
-
-  private startPresence(): void {
-    const post = () => {
-      void postRoomPresence(this.room, this.id)
-    }
-    post()
-    this.presenceTimer = setInterval(post, 20_000)
-  }
-
   close(): void {
-    this.closed = true
-    if (this.presenceTimer) {
-      clearInterval(this.presenceTimer)
+    if (this.closed) {
+      return
     }
+    this.closed = true
     for (const c of this.inboundByPeer.values()) {
       c.close()
     }
@@ -186,8 +189,7 @@ export class RoomSession implements SessionRuntime {
       pc.close()
     }
     this.pcs.clear()
-    this.ws?.close()
-    this.ws = null
+    this.link.close()
   }
 
   onOpen(callback: (id: string) => void): void {
@@ -198,28 +200,29 @@ export class RoomSession implements SessionRuntime {
   }
 
   onDisconnect(callback: () => void): void {
-    if (!this.ws) {
-      return
-    }
-    this.ws.addEventListener('close', () => {
-      if (!this.closed) {
-        this.closed = true
-        callback()
-      }
-    })
+    this.onDisconnectCb = callback
   }
 
   onClose(callback: () => void): void {
-    if (!this.ws) {
-      return
-    }
-    this.ws.addEventListener('close', () => {
-      callback()
-    })
+    this.onCloseCb = callback
   }
 
   onConnection(callback: PeerLinkCallback): void {
     this.inboundCallback = callback
+  }
+
+  /** Subscribe to peer-roster changes; returns an unsubscribe. */
+  onPeers(callback: (peers: string[]) => void): () => void {
+    this.peersListeners.add(callback)
+    callback(this.roomPeers)
+    return () => {
+      this.peersListeners.delete(callback)
+    }
+  }
+
+  /** Ask the server to re-send the roster (and wait for it via `onPeers`). */
+  refreshPeers(): void {
+    this.link.requestPeers()
   }
 
   getPeerId(user: string): string {

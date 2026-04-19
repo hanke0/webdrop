@@ -1,5 +1,4 @@
 import { icons, prefixes } from './names'
-import { fetchDefaultRoom } from './api'
 
 const roomRE = /^[A-Z0-9]{6}$/
 export function isGoodRoom(room: string): boolean {
@@ -16,10 +15,6 @@ export function isGoodRoomAndName(id: string): boolean {
   return roomAndNameRE.test(id)
 }
 
-const alnum = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-
-/** Persisted on the SPA origin so refresh keeps the same room. */
-export const SESSION_ROOM_STORAGE_KEY = 'webdrop_session_room'
 export const SESSION_USER_STORAGE_KEY = 'webdrop_session_user'
 
 function storageGet(key: string): string | null {
@@ -45,33 +40,15 @@ function storageSet(key: string, value: string): void {
 }
 
 /**
- * Room for this browser session:
- * URL → localStorage → subnet **default-room** API → random.
+ * Room override from the URL query (`?room=`). If missing, the server picks
+ * one based on the client's subnet.
  */
-export async function resolveSessionRoom(
-  search: URLSearchParams
-): Promise<string> {
+export function resolveRoomOverride(search: URLSearchParams): string | null {
   const fromQuery = search.get('room')
   if (fromQuery && isGoodRoom(fromQuery)) {
-    storageSet(SESSION_ROOM_STORAGE_KEY, fromQuery)
     return fromQuery
   }
-  const stored = storageGet(SESSION_ROOM_STORAGE_KEY)
-  if (stored && isGoodRoom(stored)) {
-    return stored
-  }
-  try {
-    const data = await fetchDefaultRoom()
-    if (data && isGoodRoom(data.room)) {
-      storageSet(SESSION_ROOM_STORAGE_KEY, data.room)
-      return data.room
-    }
-  } catch {
-    /* offline / blocked */
-  }
-  const created = randomRoom()
-  storageSet(SESSION_ROOM_STORAGE_KEY, created)
-  return created
+  return null
 }
 
 /** Display user id: URL → localStorage → random. */
@@ -90,24 +67,13 @@ export function resolveSessionUser(search: URLSearchParams): string {
   return created
 }
 
-export function randomRoom(): string {
-  const chars = alnum.split('')
-  let out = ''
-  for (let i = 0; i < 6; i++) {
-    const j = Math.floor(Math.random() * chars.length)
-    out += chars[j]!
-    chars.splice(j, 1)
-  }
-  return out
-}
-
 export function randomUser(): string {
   const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
   const name = icons[Math.floor(Math.random() * icons.length)]
   return `${prefix}-${name}`
 }
 
-/** Current origin with `?room=` (share link only; does not call the API). */
+/** Current origin with `?room=` (share link; server still honours it). */
 export function getRoomURL(room: string): string {
   const url = new URL(window.location.href)
   url.searchParams.set('room', room)

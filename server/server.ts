@@ -148,6 +148,12 @@ function roomCodeFromSeed(seed: string): string {
   return name
 }
 
+function defaultRoomFromRequest(req: IncomingMessage): string {
+  const ip = getClientIp(req)
+  const seed = ip ? subnetSeedForLanRoom(ip) : 'unknown'
+  return roomCodeFromSeed(seed)
+}
+
 // --- HTTP / WebSocket app ---
 
 const app = express()
@@ -156,124 +162,62 @@ const server = createServer(app)
 app.set('trust proxy', 1)
 app.use(helmet())
 app.use(morgan('short'))
-app.use(express.json({ limit: '512kb' }))
 
-const cleanPath = (path: string) => {
-  const end = path.endsWith('/') ? path.length - 1 : path.length
-  const start = path.startsWith('/') ? 1 : 0
-  return path.slice(start, end)
-}
+const WS_PATH = '/api/v2/ws'
 
-const _u = (url: string, prefix: string) => {
-  if (url == '/' || !url) {
-    return `/${cleanPath(prefix)}`
-  }
-  return `/${cleanPath(prefix)}/${cleanPath(url)}`
-}
+const ROOM_RE = /^[A-Z0-9]{6}$/
+const USER_RE = /^[a-z]+-[a-z]+$/
 
-const STATIC_PREFIX = '/'
-const API_V2_PREFIX = '/api/v2'
-
-const u = (url: string) => {
-  return _u(url, STATIC_PREFIX)
-}
-
-const v2 = (url: string) => {
-  return _u(url, API_V2_PREFIX)
-}
-
-const signalPathV2 = v2('/signal')
-
-const roomID = /^[A-Z0-9]{6}$/
-
-function roomParam(
-  p: string | string[] | undefined
-): string | undefined {
-  if (p == null) {
-    return undefined
-  }
-  return Array.isArray(p) ? p[0] : p
-}
-
-/** ROOM + adjective-noun-adjective peer id → room code */
-function peerIdRoom(peerId: string) {
-  const parts = peerId.split('-')
-  if (parts.length !== 3) {
-    return null
-  }
-  if (!roomID.test(parts[0])) {
-    return null
-  }
-  return parts[0]
-}
-
-type Presence = {
-  peerId: string
-  lastSeen: number
-}
-
-const roomPresence = new Map<string, Map<string, Presence>>()
-const PRESENCE_TTL_MS = 90_000
-
-function pruneRoom(rid: string) {
-  const m = roomPresence.get(rid)
-  if (!m) {
-    return
-  }
-  const now = Date.now()
-  for (const [k, v] of m) {
-    if (now - v.lastSeen > PRESENCE_TTL_MS) {
-      m.delete(k)
-    }
-  }
-  if (m.size === 0) {
-    roomPresence.delete(rid)
-  }
-}
-
-/** room id → peerId → websocket (WebRTC signaling only) */
-const signalSockets = new Map<string, Map<string, WebSocket>>()
-
+const WS_CLOSE_BAD_REQUEST = 4000
 const WS_CLOSE_USERNAME_IN_USE = 4002
 
-function wsIsClaimed(ws: WebSocket): boolean {
-  return (
-    ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING
-  )
+type Peer = {
+  peerId: string
+  room: string
+  ws: WebSocket
 }
 
-function registerSignalSocket(room: string, peerId: string, ws: WebSocket) {
-  let m = signalSockets.get(room)
+/** room id → peerId → Peer */
+const rooms = new Map<string, Map<string, Peer>>()
+
+function roomPeerIds(roomId: string, except?: string): string[] {
+  const m = rooms.get(roomId)
   if (!m) {
-    m = new Map()
-    signalSockets.set(room, m)
+    return []
   }
-  const prev = m.get(peerId)
-  if (prev && prev !== ws && wsIsClaimed(prev)) {
-    ws.close(WS_CLOSE_USERNAME_IN_USE, 'username_in_use')
+  const out: string[] = []
+  for (const p of m.values()) {
+    if (p.peerId !== except) {
+      out.push(p.peerId)
+    }
+  }
+  return out
+}
+
+function broadcast(roomId: string, payload: unknown, except?: WebSocket): void {
+  const m = rooms.get(roomId)
+  if (!m) {
     return
   }
-  m.set(peerId, ws)
-  ws.on('close', () => {
-    const mm = signalSockets.get(room)
-    if (mm?.get(peerId) === ws) {
-      mm.delete(peerId)
+  const data = JSON.stringify(payload)
+  for (const p of m.values()) {
+    if (p.ws === except) {
+      continue
     }
-    if (mm && mm.size === 0) {
-      signalSockets.delete(room)
+    if (p.ws.readyState === WebSocket.OPEN) {
+      p.ws.send(data)
     }
-    const pm = roomPresence.get(room)
-    if (pm) {
-      pm.delete(peerId)
-      if (pm.size === 0) {
-        roomPresence.delete(room)
-      }
-    }
-  })
+  }
 }
 
-type SignalClientMsg = {
-  v?: unknown
+function send(ws: WebSocket, payload: unknown): void {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(payload))
+  }
+}
+
+type ClientMsg = {
+  type?: unknown
   to?: unknown
   body?: unknown
 }
@@ -283,32 +227,81 @@ const wss = new WebSocketServer({ noServer: true })
 wss.on('connection', (ws, req) => {
   const host = req.headers.host ?? 'localhost'
   const url = new URL(req.url ?? '/', `http://${host}`)
-  const room = url.searchParams.get('room')
-  const peerId = url.searchParams.get('peerId')
-  if (!room || !peerId || peerIdRoom(peerId) !== room) {
-    ws.close(4000, 'invalid room or peerId')
+  const user = (url.searchParams.get('user') ?? '').toLowerCase()
+  if (!USER_RE.test(user)) {
+    ws.close(WS_CLOSE_BAD_REQUEST, 'invalid user')
     return
   }
-  registerSignalSocket(room, peerId, ws)
+
+  const roomParam = url.searchParams.get('room') ?? ''
+  const room =
+    roomParam && ROOM_RE.test(roomParam) ? roomParam : defaultRoomFromRequest(req)
+  const peerId = `${room}-${user}`
+
+  let m = rooms.get(room)
+  if (!m) {
+    m = new Map()
+    rooms.set(room, m)
+  }
+  const existing = m.get(peerId)
+  if (existing && existing.ws.readyState === WebSocket.OPEN) {
+    ws.close(WS_CLOSE_USERNAME_IN_USE, 'username_in_use')
+    return
+  }
+
+  const peer: Peer = { peerId, room, ws }
+  m.set(peerId, peer)
+
+  send(ws, {
+    type: 'welcome',
+    room,
+    peerId,
+    peers: roomPeerIds(room, peerId),
+  })
+  broadcast(room, { type: 'peer.join', peerId }, ws)
+
   ws.on('message', (raw) => {
-    let msg: SignalClientMsg
+    let msg: ClientMsg
     try {
-      msg = JSON.parse(raw.toString()) as SignalClientMsg
+      msg = JSON.parse(raw.toString()) as ClientMsg
     } catch {
       return
     }
-    if (msg.v !== 2 || typeof msg.to !== 'string' || typeof msg.body !== 'object') {
+    if (!msg || typeof msg !== 'object') {
       return
     }
-    if (msg.body === null || Array.isArray(msg.body)) {
+    if (msg.type === 'signal') {
+      if (
+        typeof msg.to !== 'string' ||
+        msg.body === null ||
+        typeof msg.body !== 'object' ||
+        Array.isArray(msg.body)
+      ) {
+        return
+      }
+      const target = rooms.get(room)?.get(msg.to)
+      if (target && target.ws.readyState === WebSocket.OPEN) {
+        send(target.ws, { type: 'signal', from: peerId, body: msg.body })
+      }
       return
     }
-    if (peerIdRoom(msg.to) !== room) {
+    if (msg.type === 'peers') {
+      send(ws, { type: 'peers', peers: roomPeerIds(room, peerId) })
       return
     }
-    const target = signalSockets.get(room)?.get(msg.to)
-    if (target?.readyState === WebSocket.OPEN) {
-      target.send(JSON.stringify({ v: 2, from: peerId, body: msg.body }))
+  })
+
+  ws.on('close', () => {
+    const mm = rooms.get(room)
+    if (!mm) {
+      return
+    }
+    if (mm.get(peerId) === peer) {
+      mm.delete(peerId)
+      broadcast(room, { type: 'peer.leave', peerId })
+      if (mm.size === 0) {
+        rooms.delete(room)
+      }
     }
   })
 })
@@ -316,7 +309,7 @@ wss.on('connection', (ws, req) => {
 server.on('upgrade', (request, socket, head) => {
   const host = request.headers.host ?? 'localhost'
   const path = new URL(request.url ?? '/', `http://${host}`).pathname
-  if (path !== signalPathV2) {
+  if (path !== WS_PATH) {
     socket.destroy()
     return
   }
@@ -336,64 +329,19 @@ function listenPort(): number {
   return Number.isFinite(n) && n > 0 && n < 65536 ? n : 8080
 }
 
-const httpPort = listenPort()
-
-app.post(v2('/room/:room/presence'), (req, res) => {
-  const rid = roomParam(req.params.room)
-  const body = req.body as { peerId?: string }
-  if (!rid || typeof body.peerId !== 'string') {
-    res.status(400).json({ error: 'bad request' })
-    return
-  }
-  if (peerIdRoom(body.peerId) !== rid) {
-    res.status(400).json({ error: 'peerId does not match room' })
-    return
-  }
-  let m = roomPresence.get(rid)
-  if (!m) {
-    m = new Map()
-    roomPresence.set(rid, m)
-  }
-  m.set(body.peerId, {
-    peerId: body.peerId,
-    lastSeen: Date.now(),
-  })
-  res.json({ ok: true })
-})
-
-app.get(v2('/room/:room/users'), (req, res) => {
-  const rid = roomParam(req.params.room)
-  if (!rid) {
-    res.status(400).send('Invalid room')
-    return
-  }
-  pruneRoom(rid)
-  const m = roomPresence.get(rid)
-  if (!m) {
-    res.json([])
-    return
-  }
-  res.json([...m.values()].map((v) => ({ id: v.peerId })))
-})
-
-app.get(v2('/default-room'), (req, res) => {
-  const ip = getClientIp(req)
-  const seed = ip ? subnetSeedForLanRoom(ip) : 'unknown'
-  res.json({ room: roomCodeFromSeed(seed) })
-})
-
-app.use(u('/'), express.static('dist'))
+app.use('/', express.static('dist'))
 
 const host = listenHost()
+const port = listenPort()
 server.listen(
   {
     host,
-    port: httpPort,
+    port,
     exclusive: true,
   },
   () => {
-    console.log(`Server is running on http://${host}:${httpPort}`)
-    console.log(`WebRTC signaling WebSocket path: ${signalPathV2}`)
+    console.log(`Server is running on http://${host}:${port}`)
+    console.log(`Unified WebSocket path: ${WS_PATH}`)
   }
 )
 
