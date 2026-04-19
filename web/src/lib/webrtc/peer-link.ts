@@ -491,7 +491,11 @@ export class PeerLink {
           }
         }
       }
-      this.callback.fileOffer?.(this, meta, respond)
+      if (this.callback.fileOffer) {
+        this.callback.fileOffer(this, meta, respond)
+      } else {
+        respond(false)
+      }
       return
     }
     if (msg.kind === 'file.done') {
@@ -512,7 +516,7 @@ export class PeerLink {
     const ch = this.ctrl
     if (!ch || !this.chCtrlOpen()) {
       toast.error(i18n.t('conn.notOpen', { id: this.id }))
-      return
+      throw new Error('Control channel not open')
     }
     ch.send(JSON.stringify(msg))
   }
@@ -556,13 +560,20 @@ export class PeerLink {
         promiseReject: reject,
         timer,
       })
-      void this.sendCtrl({
+      this.sendCtrl({
         v: PROTOCOL_V,
         kind: 'file.offer',
         transferId,
         name: file.name,
         size: file.size,
         mime: file.type || 'application/octet-stream',
+      }).catch((err) => {
+        const p = this.pendingOffers.get(transferId)
+        if (p) {
+          clearTimeout(p.timer)
+          this.pendingOffers.delete(transferId)
+          p.promiseReject(err)
+        }
       })
     })
     if (!accepted) {
