@@ -1,6 +1,5 @@
 import { Card } from './components/card'
 import { Fresh } from './components/fresh'
-import { InputBox } from './components/inputbox'
 import { List } from './components/list'
 import { UserHead } from './components/user-head'
 import {
@@ -37,9 +36,9 @@ import { LanguageSwitch } from './components/language-switch'
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
   return (
-    <div className="wd-peer-tile cursor-pointer flex flex-col items-center gap-2 rounded-2xl p-3 bg-[var(--wd-tile-bg)] border border-[var(--wd-border)] min-w-[5.75rem] max-w-[7rem]">
+    <div className="wd-peer-tile cursor-pointer flex flex-col items-center gap-2 rounded-2xl p-3 w-[5.75rem] h-[9.30rem]">
       <UserHead uid={id} size="sm" />
-      <p className="text-[var(--wd-muted)] text-center text-xs font-medium leading-snug line-clamp-2 break-all">
+      <p className="text-[var(--wd-muted)] text-center text-xs font-medium leading-snug line-clamp-2 break-normal">
         {name}
       </p>
     </div>
@@ -257,23 +256,6 @@ export default function Home() {
     return <ErrorPage err={peer.err.message} />
   }
 
-  const handleConnectToUser = (fullName: string) => {
-    if (!peer) {
-      toast.error(t('toast.connectPeerNull'))
-      return
-    }
-    if (peer.isSelf(fullName)) {
-      toast.error(t('toast.connectSelf'))
-      return
-    }
-    const id = peer.getPeerId(fullName)
-    if (!peer.roomPeers.includes(id)) {
-      toast.error(t('toast.userNotOnline'))
-      return
-    }
-    peer.connect(fullName, outboundHandlers)
-  }
-
   const handleSendFileToPeer = async (conn: PeerLink, file: File) => {
     const name = getUserShowName(conn.id)
     toast.promise(sendFile(conn, file), {
@@ -366,18 +348,6 @@ export default function Home() {
                   busy={listRefreshBusy}
                 />
               </button>
-            </div>
-
-            <div className="text-left">
-              <p className="text-xs text-[var(--wd-muted)] mb-2 font-medium">
-                {t('app.connectByNameHint')}
-              </p>
-              <InputBox
-                placeholder={t('app.connectPlaceholder')}
-                buttonText={t('app.connectButton')}
-                onSubmit={(id) => handleConnectToUser(id)}
-                autoComplete="off"
-              />
             </div>
 
             <div className="rounded-xl border border-[var(--wd-border)] bg-[var(--wd-surface-muted)] p-3 min-h-[7rem]">
