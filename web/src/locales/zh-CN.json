@@ -23,7 +23,9 @@
     "sendFileSuccess": "已发送 {{fileName}} 给 {{name}}",
     "sendFileError": "发送失败：{{message}}",
     "chatReceived": "{{name}}：{{preview}}",
-    "chatRejectedOrTimeout": "对方拒绝了聊天或未在规定时间内响应"
+    "chatRejectedOrTimeout": "对方拒绝了聊天或未在规定时间内响应",
+    "fileReceived": "已接收 {{name}}",
+    "fileOverflow": "传输已中止：收到的字节数超过了声明的大小"
   },
   "peer": {
     "pickFile": "请选择文件",

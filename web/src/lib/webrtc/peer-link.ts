@@ -9,7 +9,7 @@ import {
   PROTOCOL_V,
   rtcConfig,
 } from './constants'
-import { sendBinaryChunks } from './dc-send'
+import { sendBlobChunks } from './dc-send'
 import { IceCandidatePipeline } from './ice-pipeline'
 import { attachPcLogging, candidateType, webrtcLog } from './log'
 import {
@@ -61,14 +61,6 @@ function waitForInboundChannels(
 ): Promise<{ ctrl: RTCDataChannel; file: RTCDataChannel }> {
   return new Promise((resolve, reject) => {
     const parts: Partial<{ c: RTCDataChannel; f: RTCDataChannel }> = {}
-    const t = setTimeout(() => reject(new Error('datachannel timeout')), 60_000)
-    const tryDone = () => {
-      if (parts.c && parts.f) {
-        clearTimeout(t)
-        pc.removeEventListener('datachannel', onDc)
-        resolve({ ctrl: parts.c, file: parts.f })
-      }
-    }
     const onDc = (ev: RTCDataChannelEvent) => {
       const ch = ev.channel
       if (ch.label === CTRL_LABEL) {
@@ -77,8 +69,16 @@ function waitForInboundChannels(
         ch.binaryType = 'arraybuffer'
         parts.f = ch
       }
-      tryDone()
+      if (parts.c && parts.f) {
+        clearTimeout(t)
+        pc.removeEventListener('datachannel', onDc)
+        resolve({ ctrl: parts.c, file: parts.f })
+      }
     }
+    const t = setTimeout(() => {
+      pc.removeEventListener('datachannel', onDc)
+      reject(new Error('datachannel timeout'))
+    }, 60_000)
     pc.addEventListener('datachannel', onDc)
   })
 }
@@ -112,10 +112,6 @@ async function exchangeSessionReady(
     })
   )
   await new Promise<void>((resolve, reject) => {
-    const t = setTimeout(
-      () => reject(new Error('session.ready timeout')),
-      30_000
-    )
     const onMsg = (ev: MessageEvent) => {
       const msg = decodeCtrl(ev)
       if (
@@ -128,6 +124,10 @@ async function exchangeSessionReady(
         resolve()
       }
     }
+    const t = setTimeout(() => {
+      ctrl.removeEventListener('message', onMsg)
+      reject(new Error('session.ready timeout'))
+    }, 30_000)
     ctrl.addEventListener('message', onMsg)
   })
 }
@@ -157,6 +157,7 @@ export class PeerLink {
   private readyPromise: Promise<void>
   private readyResolve!: () => void
   private readyReject!: (err: Error) => void
+  private readySettled = false
 
   get ok() {
     return !this.err && !this.closed
@@ -197,11 +198,23 @@ export class PeerLink {
       this.bindFileReceive()
       this.bindCtrlApp()
       this.opened = true
-      this.readyResolve()
+      this.settleReady(null)
       this.callback.open(this)
     } else {
       this.signalPeerId = null
       void this.openOutbound()
+    }
+  }
+
+  private settleReady(err: Error | null): void {
+    if (this.readySettled) {
+      return
+    }
+    this.readySettled = true
+    if (err) {
+      this.readyReject(err)
+    } else {
+      this.readyResolve()
     }
   }
 
@@ -342,7 +355,7 @@ export class PeerLink {
       this.bindCtrlApp()
 
       this.opened = true
-      this.readyResolve()
+      this.settleReady(null)
       this.callback.open(this)
     } catch (e) {
       this.session.unregisterSignalHandler(remotePeerId)
@@ -350,7 +363,7 @@ export class PeerLink {
       this.err = err
       this.closed = true
       pc.close()
-      this.readyReject(err)
+      this.settleReady(err)
       this.callback.error(this, err)
     }
   }
@@ -366,11 +379,18 @@ export class PeerLink {
         return
       }
       const chunk = new Uint8Array(ev.data as ArrayBuffer)
+      if (sink.total + chunk.byteLength > sink.size) {
+        /* Sender exceeded declared size: abort transfer and drop the connection. */
+        this.fileSink = null
+        toast.error(i18n.t('toast.fileOverflow'))
+        this.close()
+        return
+      }
       sink.received.push(chunk)
       sink.total += chunk.byteLength
       if (sink.total >= sink.size) {
         const blob = new Blob(sink.received as BlobPart[], { type: sink.mime })
-        toast(`receive file ${sink.name}`, { icon: '📁' })
+        toast(i18n.t('toast.fileReceived', { name: sink.name }), { icon: '📁' })
         fileDownload(blob, sink.name)
         this.fileSink = null
       }
@@ -528,9 +548,7 @@ export class PeerLink {
     if (!accepted) {
       throw new Error('Receiver declined the transfer')
     }
-    const ab = await file.arrayBuffer()
-    const u8 = new Uint8Array(ab)
-    await sendBinaryChunks(fch, u8, FILE_CHUNK)
+    await sendBlobChunks(fch, file, FILE_CHUNK)
     await this.sendCtrl({
       v: PROTOCOL_V,
       kind: 'file.done',
@@ -542,6 +560,7 @@ export class PeerLink {
     if (this.closed) {
       return
     }
+    this.settleReady(new Error('Connection closed'))
     clearPendingBooleanResponses(
       this.pendingOffers,
       new Error('Connection closed')

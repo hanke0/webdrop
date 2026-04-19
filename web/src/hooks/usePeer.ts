@@ -54,7 +54,7 @@ export function usePeer(
           toast.error(
             i18n.t('hook.peerError', { message: instance.err.message })
           )
-          setPeer(null)
+          setPeer(instance)
           return
         }
         live = instance

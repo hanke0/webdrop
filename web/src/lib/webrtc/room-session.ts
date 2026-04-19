@@ -233,8 +233,9 @@ export class RoomSession implements SessionRuntime {
     return this.getPeerId(id) === this.id
   }
 
-  connect(fullName: string, callback: PeerLinkCallback): PeerLink {
-    const peerId = this.getPeerId(fullName)
+  /** Accepts either a full peer id (`ABC123-adj-noun`) or a bare `adj-noun`. */
+  connect(idOrName: string, callback: PeerLinkCallback): PeerLink {
+    const peerId = this.getPeerId(idOrName)
     return new PeerLink(peerId, this, callback)
   }
 }

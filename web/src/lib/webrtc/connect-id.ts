@@ -7,7 +7,7 @@ export function resolvePeerId(room: string, fullName: string): string {
   if (isGoodUser(fullName)) {
     return `${room}-${fullName}`
   }
-  const maybe = fullName.toLowerCase().replace(' ', '-')
+  const maybe = fullName.toLowerCase().replace(/ /g, '-')
   if (isGoodUser(maybe)) {
     return `${room}-${maybe}`
   }

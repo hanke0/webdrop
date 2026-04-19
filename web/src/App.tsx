@@ -1,37 +1,37 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import { Card } from './components/card'
+import { ErrorPage } from './components/error-page'
+import {
+  FileReceiveDialog,
+  IncomingFileOffer,
+} from './components/file-receive-dialog'
 import { Fresh } from './components/fresh'
+import { LanguageSwitch } from './components/language-switch'
 import { List } from './components/list'
+import { LoadingPage } from './components/loading-page'
+import { Main } from './components/main'
+import {
+  ChatLine,
+  PeerDialog,
+  PeerDialogState,
+} from './components/peer-dialog'
 import { UserHead } from './components/user-head'
+import { UserText } from './components/user-text'
+import { usePeer } from './hooks/usePeer'
+import { useUsers } from './hooks/useUsers'
 import {
   LazyConnection,
   LazyConnectionImpl,
   PeerLink,
   RoomSession,
 } from './lib/webrtc'
+import { getUserShowName } from './lib/room'
 
 function lazyFromPeer(conn: PeerLink): LazyConnection {
   return new LazyConnectionImpl(conn.id, () => conn)
 }
-import { usePeer } from './hooks/usePeer'
-import { Main } from './components/main'
-import { UserText } from './components/user-text'
-import {
-  FileReceiveDialog,
-  IncomingFileOffer,
-} from './components/file-receive-dialog'
-import {
-  ChatLine,
-  PeerDialog,
-  PeerDialogState,
-} from './components/peer-dialog'
-import { LoadingPage } from './components/loading-page'
-import { ErrorPage } from './components/error-page'
-import { getUserShowName } from './lib/room'
-import { useUsers } from './hooks/useUsers'
-import { toast } from 'react-hot-toast'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { LanguageSwitch } from './components/language-switch'
 
 const generateListItem = ({ id }: LazyConnection) => {
   const name = getUserShowName(id)
@@ -246,41 +246,52 @@ export default function Home() {
     }
     setListRefreshBusy(true)
     peer.refreshPeers()
-    window.setTimeout(() => setListRefreshBusy(false), 400)
+    setTimeout(() => setListRefreshBusy(false), 400)
   }, [peer])
+
+  const handleSendFileToPeer = useCallback(
+    async (conn: PeerLink, file: File) => {
+      const name = getUserShowName(conn.id)
+      toast.promise(sendFile(conn, file), {
+        loading: t('toast.sendFileLoading', { name, fileName: file.name }),
+        success: t('toast.sendFileSuccess', { name, fileName: file.name }),
+        error: (err) => t('toast.sendFileError', { message: String(err) }),
+      })
+    },
+    [t]
+  )
+
+  const handleOpenChat = useCallback(
+    (lazy: LazyConnection) => {
+      if (!peer) {
+        return
+      }
+      const conn = lazy.getReal(peer)
+      setPeerUi({ kind: 'chat', conn, peerId: conn.id })
+    },
+    [peer]
+  )
+
+  const handlePeerDialogClose = useCallback(() => {
+    setPeerUi(null)
+  }, [])
+
+  const handleSendChat = useCallback(
+    (conn: PeerLink, text: string) => {
+      const messageId = conn.sendChatText(text)
+      if (!messageId) {
+        return
+      }
+      appendChatLine(conn.id, true, text, { id: messageId, pending: true })
+    },
+    [appendChatLine]
+  )
 
   if (!peer) {
     return <LoadingPage />
   }
   if (peer.err) {
     return <ErrorPage err={peer.err.message} />
-  }
-
-  const handleSendFileToPeer = async (conn: PeerLink, file: File) => {
-    const name = getUserShowName(conn.id)
-    toast.promise(sendFile(conn, file), {
-      loading: t('toast.sendFileLoading', { name, fileName: file.name }),
-      success: t('toast.sendFileSuccess', { name, fileName: file.name }),
-      error: (err) =>
-        t('toast.sendFileError', { message: String(err) }),
-    })
-  }
-
-  const handleOpenChat = (lazy: LazyConnection) => {
-    const conn = lazy.getReal(peer)
-    setPeerUi({ kind: 'chat', conn, peerId: conn.id })
-  }
-
-  const handlePeerDialogClose = () => {
-    setPeerUi(null)
-  }
-
-  const handleSendChat = (conn: PeerLink, text: string) => {
-    const messageId = conn.sendChatText(text)
-    if (!messageId) {
-      return
-    }
-    appendChatLine(conn.id, true, text, { id: messageId, pending: true })
   }
 
   return (

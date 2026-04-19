@@ -154,7 +154,6 @@ async function waitForWelcome(ws: WebSocket): Promise<Welcome> {
   return await new Promise<Welcome>((resolve, reject) => {
     let finished = false
     const cleanup = () => {
-      ws.removeEventListener('open', onOpen)
       ws.removeEventListener('close', onClose)
       ws.removeEventListener('message', onMessage)
       ws.removeEventListener('error', onError)
@@ -179,11 +178,6 @@ async function waitForWelcome(ws: WebSocket): Promise<Welcome> {
       finished = true
       cleanup()
       resolve(w)
-    }
-    const onOpen = () => {
-      if (ws.readyState !== WebSocket.OPEN) {
-        fail(new Error('WebRTC signaling connection closed before handshake'))
-      }
     }
     const onClose = (ev: CloseEvent) => {
       fail(new Error(signalingClosedMessage(ev.code)))
@@ -219,7 +213,6 @@ async function waitForWelcome(ws: WebSocket): Promise<Welcome> {
     const onError = () => {
       fail(new Error('WebRTC signaling connection failed'))
     }
-    ws.addEventListener('open', onOpen)
     ws.addEventListener('close', onClose)
     ws.addEventListener('message', onMessage)
     ws.addEventListener('error', onError)

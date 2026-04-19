@@ -7,9 +7,9 @@ export interface LazyConnection {
 }
 
 export class LazyConnectionImpl implements LazyConnection {
-  id: string
-  buildConn: (peer: RoomSession) => PeerLink
-  conn?: PeerLink
+  readonly id: string
+  private readonly buildConn: (peer: RoomSession) => PeerLink
+  private conn?: PeerLink
 
   constructor(id: string, buildConn: (peer: RoomSession) => PeerLink) {
     this.id = id

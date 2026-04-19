@@ -66,6 +66,22 @@ export function PeerDialog(props: PeerDialogProps) {
     onClose()
   }
 
+  const submitChat = () => {
+    if (state?.kind !== 'chat') {
+      return
+    }
+    const text = draft.trim()
+    if (!text) {
+      return
+    }
+    if (!state.conn.opened) {
+      toast.error(t('peer.waitConnection'))
+      return
+    }
+    onSendChat(state.conn, text)
+    setDraft('')
+  }
+
   const handleSendFileClick = async () => {
     if (sendingFile) {
       return
@@ -205,16 +221,7 @@ export function PeerDialog(props: PeerDialogProps) {
             className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end"
             onSubmit={(e) => {
               e.preventDefault()
-              const text = draft.trim()
-              if (!text) {
-                return
-              }
-              if (!state.conn.opened) {
-                toast.error(t('peer.waitConnection'))
-                return
-              }
-              onSendChat(state.conn, text)
-              setDraft('')
+              submitChat()
             }}
           >
             <textarea
@@ -225,15 +232,7 @@ export function PeerDialog(props: PeerDialogProps) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  const text = draft.trim()
-                  if (text) {
-                    if (!state.conn.opened) {
-                      toast.error(t('peer.waitConnection'))
-                      return
-                    }
-                    onSendChat(state.conn, text)
-                    setDraft('')
-                  }
+                  submitChat()
                 }
               }}
             />

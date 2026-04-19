@@ -23,7 +23,9 @@
     "sendFileSuccess": "Sent {{fileName}} to {{name}}",
     "sendFileError": "Send failed: {{message}}",
     "chatReceived": "{{name}}: {{preview}}",
-    "chatRejectedOrTimeout": "They declined the chat or did not respond in time."
+    "chatRejectedOrTimeout": "They declined the chat or did not respond in time.",
+    "fileReceived": "Received {{name}}",
+    "fileOverflow": "Transfer aborted: received more bytes than declared"
   },
   "peer": {
     "pickFile": "Choose a file",
