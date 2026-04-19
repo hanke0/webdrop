@@ -1,7 +1,7 @@
 {
   "name": "@webdrop/server",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "build": "tsc && node build-bundle.mjs",
@@ -15,13 +15,13 @@
     "@types/express": "^5.0.6",
     "@types/morgan": "^1.9.10",
     "@types/ws": "^8.18.1",
-    "esbuild": "^0.25.5"
+    "esbuild": "^0.25.12"
   },
   "dependencies": {
-    "dotenv": "^17.4.1",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "morgan": "^1.10.1",
-    "ws": "^8.18.3"
+    "ws": "^8.20.0"
   }
 }
