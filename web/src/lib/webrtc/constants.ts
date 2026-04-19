@@ -10,5 +10,19 @@ export const FILE_LABEL = 'webdrop-file'
 export const FILE_CHUNK = 256 * 1024
 
 export const rtcConfig: RTCConfiguration = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+  iceServers: [
+    {
+      urls: [
+        // Google
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        // Cloudflare
+        'stun:stun.cloudflare.com:3478',
+        // China-friendly
+        'stun:stun.miwifi.com:3478',
+        'stun:stun.qq.com:3478',
+      ],
+    },
+  ],
 }
