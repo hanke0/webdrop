@@ -8,13 +8,12 @@
     "server"
   ],
   "scripts": {
-    "dev": "npm run dev -w @webdrop/web",
+    "dev": "npm run -w @webdrop/web dev",
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint web server eslint.config.ts --max-warnings 0",
     "test": "npm run test -w @webdrop/web",
     "fmt": "npm run lint -- --fix",
-    "build-server": "npm run build -w @webdrop/server",
-    "serve-dev": "./scripts/serve-dev.sh"
+    "server-dev": "npm run dev --workspace=@webdrop/server"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",

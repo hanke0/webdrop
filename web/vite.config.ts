@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
 
   const devProxy =
     mode === 'development'
-      ? { '/api/v1': withForwardedClientIp(devApiTarget, true) }
+      ? { '/api/v2': withForwardedClientIp(devApiTarget, true) }
       : undefined
 
   const manifest = {

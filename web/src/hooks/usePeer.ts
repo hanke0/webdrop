@@ -1,32 +1,36 @@
 import { useSearchParams } from './useSearchParams'
-import { ConnectionCallback, LazyConnection, P2P } from '../lib/p2p'
-import { resolveSessionRoom, resolveSessionUser } from '../lib/room'
 import { MutableRefObject, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import i18n from '../i18n'
+import type {
+  LazyConnection,
+  PeerLink,
+  PeerLinkCallback,
+} from '../lib/webrtc'
+import { LazyConnectionImpl, RoomSession } from '../lib/webrtc'
+import { resolveSessionRoom, resolveSessionUser } from '../lib/room'
 
 export function usePeer(
   addConnection: (conn: LazyConnection) => void,
   removeConnection: (conn: LazyConnection) => void,
-  fileOfferRef: MutableRefObject<ConnectionCallback['fileOffer'] | undefined>,
-  chatInviteRef: MutableRefObject<ConnectionCallback['chatInvite'] | undefined>,
-  chatMessageRef: MutableRefObject<ConnectionCallback['chatMessage'] | undefined>
+  fileOfferRef: MutableRefObject<PeerLinkCallback['fileOffer'] | undefined>,
+  chatMessageRef: MutableRefObject<PeerLinkCallback['chatMessage'] | undefined>
 ) {
   const search = useSearchParams()
-  const [peer, setPeer] = useState<P2P | null>(null)
+  const [peer, setPeer] = useState<RoomSession | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    let live: P2P | null = null
-    const inboundHandlers: ConnectionCallback = {
-      open: addConnection,
-      error: removeConnection,
-      close: removeConnection,
+    let live: RoomSession | null = null
+    const wrap = (conn: PeerLink) =>
+      new LazyConnectionImpl(conn.id, () => conn)
+
+    const inboundHandlers: PeerLinkCallback = {
+      open: (conn) => addConnection(wrap(conn)),
+      error: (conn) => removeConnection(wrap(conn)),
+      close: (conn) => removeConnection(wrap(conn)),
       get fileOffer() {
         return fileOfferRef.current
-      },
-      get chatInvite() {
-        return chatInviteRef.current
       },
       get chatMessage() {
         return chatMessageRef.current
@@ -40,7 +44,7 @@ export function usePeer(
           return
         }
         const user = resolveSessionUser(search)
-        const instance = await P2P.create({ room, user }, inboundHandlers)
+        const instance = await RoomSession.create({ room, user }, inboundHandlers)
         if (cancelled) {
           instance.close()
           return
@@ -79,14 +83,7 @@ export function usePeer(
       live?.close()
       setPeer(null)
     }
-  }, [
-    search,
-    addConnection,
-    removeConnection,
-    fileOfferRef,
-    chatInviteRef,
-    chatMessageRef,
-  ])
+  }, [search, addConnection, removeConnection, fileOfferRef, chatMessageRef])
 
   return peer
 }

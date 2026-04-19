@@ -19,8 +19,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "./server.ts",
-    "./ipSubnet.ts"
-  ]
+  "include": ["./server.ts"]
 }

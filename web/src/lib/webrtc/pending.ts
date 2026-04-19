@@ -1,6 +1,6 @@
 export type PendingBooleanResponse = {
-  resolve: (accepted: boolean) => void
-  promiseReject: (err: Error) => void
+  resolve: (v: boolean) => void
+  promiseReject: (e: Error) => void
   timer: ReturnType<typeof setTimeout>
 }
 
@@ -8,9 +8,9 @@ export function clearPendingBooleanResponses(
   map: Map<string, PendingBooleanResponse>,
   err: Error
 ): void {
-  for (const [key, p] of [...map.entries()]) {
+  for (const [, p] of map) {
     clearTimeout(p.timer)
-    map.delete(key)
     p.promiseReject(err)
   }
+  map.clear()
 }

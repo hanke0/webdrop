@@ -1,12 +1,12 @@
 /**
- * All HTTP and WebSocket access to the backend (`/api/v1`).
- * Dev: Vite proxies `/api/v1` to the Node server.
+ * All HTTP and WebSocket access to the backend (`/api/v2`).
+ * Dev: Vite proxies `/api/v2` to the Node server.
  */
 
 import toast from 'react-hot-toast'
 import i18n from '../i18n'
 
-const API_V1_PREFIX = '/api/v1'
+const API_V2_PREFIX = '/api/v2'
 
 function toastHttpError(operationKey: string, res: Response): void {
   const statusText = res.statusText ? ` ${res.statusText}` : ''
@@ -51,9 +51,9 @@ function toastPresenceError(message: string): void {
   toast.error(message)
 }
 
-function apiV1Base(): string {
+function apiV2Base(): string {
   const { protocol, host } = window.location
-  let path = API_V1_PREFIX
+  let path = API_V2_PREFIX
   if (!path.startsWith('/')) {
     path = `/${path}`
   }
@@ -64,27 +64,27 @@ function apiV1Base(): string {
 }
 
 function roomUsersUrl(room: string): string {
-  return `${apiV1Base()}room/${room}/users`
+  return `${apiV2Base()}room/${room}/users`
 }
 
 function roomPresenceUrl(room: string): string {
-  return `${apiV1Base()}room/${room}/presence`
+  return `${apiV2Base()}room/${room}/presence`
 }
 
 function defaultRoomUrl(): string {
-  return `${apiV1Base()}default-room`
+  return `${apiV2Base()}default-room`
 }
 
-function signalingWebSocketUrl(room: string, logicalId: string): string {
+function signalingWebSocketUrl(room: string, peerId: string): string {
   const { protocol, host } = window.location
   const wsScheme = protocol === 'https:' ? 'wss:' : 'ws:'
-  const base = API_V1_PREFIX.replace(/\/+$/, '') || '/api/v1'
+  const base = API_V2_PREFIX.replace(/\/+$/, '') || '/api/v2'
   const pathSeg = `${base.startsWith('/') ? base : `/${base}`}/signal`
-  const q = new URLSearchParams({ room, logicalId })
+  const q = new URLSearchParams({ room, peerId })
   return `${wsScheme}//${host}${pathSeg}?${q}`
 }
 
-export type RoomUserListItem = { id: string; addrs?: string[] }
+export type RoomUserListItem = { id: string }
 
 /** Subnet-based default room from the server; returns `null` if unavailable. */
 export async function fetchDefaultRoom(): Promise<{ room: string } | null> {
@@ -112,10 +112,8 @@ export async function fetchDefaultRoom(): Promise<{ room: string } | null> {
   }
 }
 
-/** Presence list for a room (`GET /api/v1/room/:room/users`). */
-export async function fetchRoomUsers(
-  room: string
-): Promise<RoomUserListItem[]> {
+/** Presence list for a room (`GET /api/v2/room/:room/users`). */
+export async function fetchRoomUsers(room: string): Promise<RoomUserListItem[]> {
   let res: Response
   try {
     res = await fetch(roomUsersUrl(room))
@@ -135,17 +133,13 @@ export async function fetchRoomUsers(
   }
 }
 
-/** Heartbeat / address registration (`POST /api/v1/room/:room/presence`). */
-export async function postRoomPresence(
-  room: string,
-  logicalId: string,
-  addrs: string[]
-): Promise<void> {
+/** Heartbeat (`POST /api/v2/room/:room/presence`). */
+export async function postRoomPresence(room: string, peerId: string): Promise<void> {
   try {
     const res = await fetch(roomPresenceUrl(room), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ logicalId, addrs }),
+      body: JSON.stringify({ peerId }),
     })
     if (!res.ok) {
       console.warn('presence POST failed:', res.status)
@@ -161,10 +155,7 @@ export async function postRoomPresence(
   }
 }
 
-/** WebRTC signaling (`WS /api/v1/signal`). */
-export function connectSignalingWebSocket(
-  room: string,
-  logicalId: string
-): WebSocket {
-  return new WebSocket(signalingWebSocketUrl(room, logicalId))
+/** WebRTC signaling (`WS /api/v2/signal`). */
+export function connectSignalingWebSocket(room: string, peerId: string): WebSocket {
+  return new WebSocket(signalingWebSocketUrl(room, peerId))
 }

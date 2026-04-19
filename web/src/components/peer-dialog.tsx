@@ -2,8 +2,9 @@ import { Dialog, OpenState } from './dialog'
 import { Upload } from './upload'
 import { Button } from './button'
 import { getUserShowName } from '../lib/room'
-import { Connection, LazyConnection, P2P } from '../lib/p2p'
-import { LoadingIcon } from './loading-icon'
+import type { LazyConnection } from '../lib/webrtc'
+import type { PeerLink } from '../lib/webrtc'
+import type { RoomSession } from '../lib/webrtc'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -12,21 +13,20 @@ export type PeerDialogState =
   | null
   | { kind: 'menu'; lazy: LazyConnection }
   | { kind: 'file'; lazy: LazyConnection }
-  | { kind: 'chat-loading'; lazy: LazyConnection }
-  | { kind: 'chat'; conn: Connection; peerId: string }
+  | { kind: 'chat'; conn: PeerLink; peerId: string }
 
 export type ChatLine = { id: string; self: boolean; text: string }
 
 export type PeerDialogProps = {
   state: PeerDialogState
-  peer: P2P
+  peer: RoomSession
   lines: ChatLine[]
   open: OpenState
   onClose: () => void
   onStateChange: (next: PeerDialogState) => void
-  onSendFile: (conn: Connection, file: File) => Promise<void>
-  onStartChat: (lazy: LazyConnection) => Promise<void>
-  onSendChat: (conn: Connection, text: string) => void
+  onSendFile: (conn: PeerLink, file: File) => Promise<void>
+  onOpenChat: (lazy: LazyConnection) => void
+  onSendChat: (conn: PeerLink, text: string) => void
 }
 
 export function PeerDialog(props: PeerDialogProps) {
@@ -38,7 +38,7 @@ export function PeerDialog(props: PeerDialogProps) {
     onClose,
     onStateChange,
     onSendFile,
-    onStartChat,
+    onOpenChat,
     onSendChat,
   } = props
   const [file, setFile] = useState(null as File | null)
@@ -107,9 +107,7 @@ export function PeerDialog(props: PeerDialogProps) {
             <Button
               variant="secondary"
               className="w-full"
-              handleClick={() => {
-                void onStartChat(state.lazy)
-              }}
+              handleClick={() => onOpenChat(state.lazy)}
             >
               {t('peer.textChat')}
             </Button>
@@ -154,20 +152,16 @@ export function PeerDialog(props: PeerDialogProps) {
         </>
       )}
 
-      {state.kind === 'chat-loading' && (
-        <div className="py-10 flex flex-col items-center gap-4 text-[var(--wd-muted)]">
-          <LoadingIcon className="w-9 h-9" />
-          <p className="text-sm text-center leading-relaxed">
-            {t('peer.waitingChatInvite', { name })}
-          </p>
-        </div>
-      )}
-
       {state.kind === 'chat' && (
         <>
           <h3 className="text-lg font-semibold text-[var(--wd-text)] pr-8">
             {t('peer.chatWith', { name })}
           </h3>
+          {!state.conn.opened && (
+            <p className="text-xs text-[var(--wd-muted)] mt-2 mb-1">
+              {t('peer.connecting')}
+            </p>
+          )}
           <div className="h-56 overflow-y-auto text-left border border-[var(--wd-border)] rounded-xl p-3 mb-3 bg-[var(--wd-input-bg)] mt-2">
             {lines.length === 0 && (
               <p className="text-[var(--wd-muted)] text-sm">
@@ -192,11 +186,15 @@ export function PeerDialog(props: PeerDialogProps) {
             className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end"
             onSubmit={(e) => {
               e.preventDefault()
-              const t = draft.trim()
-              if (!t) {
+              const text = draft.trim()
+              if (!text) {
                 return
               }
-              onSendChat(state.conn, t)
+              if (!state.conn.opened) {
+                toast.error(t('peer.waitConnection'))
+                return
+              }
+              onSendChat(state.conn, text)
               setDraft('')
             }}
           >
@@ -208,9 +206,13 @@ export function PeerDialog(props: PeerDialogProps) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  const t = draft.trim()
-                  if (t) {
-                    onSendChat(state.conn, t)
+                  const text = draft.trim()
+                  if (text) {
+                    if (!state.conn.opened) {
+                      toast.error(t('peer.waitConnection'))
+                      return
+                    }
+                    onSendChat(state.conn, text)
                     setDraft('')
                   }
                 }

@@ -1,10 +1,9 @@
 import { isGoodUser } from '../room'
 
 /**
- * Resolves a user-visible name (or raw logical id) to the full logical id for outbound WebRTC.
- * Used when connecting by display name within the current room.
+ * Resolves a display-style user name (or raw peer id) to full `ROOM-user-user` peer id.
  */
-export function resolveOutboundLogicalId(room: string, fullName: string): string {
+export function resolvePeerId(room: string, fullName: string): string {
   if (isGoodUser(fullName)) {
     return `${room}-${fullName}`
   }

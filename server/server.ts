@@ -1,14 +1,154 @@
 import 'dotenv/config'
+import { createHash } from 'crypto'
 import express from 'express'
+import type { IncomingMessage } from 'http'
+import { createServer } from 'http'
 import morgan from 'morgan'
 import helmet from 'helmet'
-import { createServer } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
-import {
-  getClientIp,
-  roomCodeFromSeed,
-  subnetSeedForLanRoom,
-} from './ipSubnet'
+
+// --- LAN room / client IP (default-room seeding) ---
+
+/** Client IP string from proxy headers or socket (Express / bare IncomingMessage). */
+function getClientIp(req: IncomingMessage): string {
+  const xReal = req.headers['x-real-ip']
+  const forwarded = req.headers['x-forwarded-for']
+  const fromForwarded =
+    typeof forwarded === 'string'
+      ? forwarded.split(',')[0]?.trim()
+      : undefined
+  const raw =
+    (typeof xReal === 'string' && xReal.length > 0 ? xReal : undefined) ??
+    fromForwarded ??
+    req.socket.remoteAddress ??
+    ''
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+
+function stripZoneAndV4Mapped(raw: string): string {
+  let ip = raw.trim()
+  const pct = ip.indexOf('%')
+  if (pct >= 0) {
+    ip = ip.slice(0, pct)
+  }
+  if (ip.toLowerCase().startsWith('::ffff:')) {
+    ip = ip.slice(7)
+  }
+  return ip
+}
+
+function parseIPv4(s: string): [number, number, number, number] | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s)
+  if (!m) {
+    return null
+  }
+  const nums = m.slice(1, 5).map((x) => parseInt(x, 10))
+  if (nums.some((n) => n > 255 || Number.isNaN(n))) {
+    return null
+  }
+  return nums as [number, number, number, number]
+}
+
+function normalizeHextet(h: string): string {
+  return h.toLowerCase().padStart(4, '0')
+}
+
+function expandIPv6Groups(s: string): string[] | null {
+  if (!s.includes(':')) {
+    return null
+  }
+  const parts = s.split('::')
+  if (parts.length > 2) {
+    return null
+  }
+  const left = parts[0] ? parts[0].split(':').filter((p) => p.length > 0) : []
+  const right =
+    parts.length === 2 && parts[1]
+      ? parts[1].split(':').filter((p) => p.length > 0)
+      : []
+  if (parts.length === 1) {
+    if (left.length !== 8) {
+      return null
+    }
+    return left.map(normalizeHextet)
+  }
+  const missing = 8 - left.length - right.length
+  if (missing < 0) {
+    return null
+  }
+  const all = [...left, ...Array(missing).fill('0'), ...right]
+  if (all.length !== 8) {
+    return null
+  }
+  return all.map(normalizeHextet)
+}
+
+/**
+ * Stable seed per LAN segment: private IPv4 → /24; public IPv4 → full address;
+ * IPv6 → /64 when parsable; ::1 → loopback bucket.
+ */
+function subnetSeedForLanRoom(ipRaw: string): string {
+  const ip = stripZoneAndV4Mapped(ipRaw)
+  if (!ip) {
+    return 'unknown'
+  }
+
+  const v4 = parseIPv4(ip)
+  if (v4) {
+    const [a, b, c, d] = v4
+    const useSlash24 =
+      a === 10 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a === 127 ||
+      (a === 169 && b === 254)
+    if (useSlash24) {
+      return `v4:${a}.${b}.${c}.0`
+    }
+    return `v4:${a}.${b}.${c}.${d}`
+  }
+
+  if (ip === '::1') {
+    return 'v6:loopback'
+  }
+
+  const g = expandIPv6Groups(ip)
+  if (g && g.length >= 4) {
+    return `v6:${g.slice(0, 4).join(':')}::`
+  }
+  return `v6:${ip}`
+}
+
+/** 6-char room code from subnet seed (MD5 → custom base64). */
+function roomCodeFromSeed(seed: string): string {
+  const bname = createHash('md5').update(seed).digest('base64')
+  let name = ''
+  for (let b of bname) {
+    b = b.toUpperCase()
+    switch (b) {
+      case '+':
+        name += '0'
+        break
+      case '/':
+        name += '1'
+        break
+      case '=':
+        name += '2'
+        break
+      default:
+        name += b
+    }
+    if (name.length === 6) {
+      break
+    }
+  }
+  while (name.length !== 6) {
+    name += 'Z'
+  }
+  return name
+}
+
+// --- HTTP / WebSocket app ---
 
 const app = express()
 const server = createServer(app)
@@ -32,17 +172,17 @@ const _u = (url: string, prefix: string) => {
 }
 
 const STATIC_PREFIX = '/'
-const API_V1_PREFIX = '/api/v1'
+const API_V2_PREFIX = '/api/v2'
 
 const u = (url: string) => {
   return _u(url, STATIC_PREFIX)
 }
 
-const v1 = (url: string) => {
-  return _u(url, API_V1_PREFIX)
+const v2 = (url: string) => {
+  return _u(url, API_V2_PREFIX)
 }
 
-const signalPath = v1('/signal')
+const signalPathV2 = v2('/signal')
 
 const roomID = /^[A-Z0-9]{6}$/
 
@@ -55,8 +195,9 @@ function roomParam(
   return Array.isArray(p) ? p[0] : p
 }
 
-function logicalIdRoom(id: string) {
-  const parts = id.split('-')
+/** ROOM + adjective-noun-adjective peer id → room code */
+function peerIdRoom(peerId: string) {
+  const parts = peerId.split('-')
   if (parts.length !== 3) {
     return null
   }
@@ -67,8 +208,7 @@ function logicalIdRoom(id: string) {
 }
 
 type Presence = {
-  logicalId: string
-  addrs: string[]
+  peerId: string
   lastSeen: number
 }
 
@@ -91,10 +231,9 @@ function pruneRoom(rid: string) {
   }
 }
 
-/** room id → logical id → websocket (WebRTC signaling only, not a libp2p relay) */
+/** room id → peerId → websocket (WebRTC signaling only) */
 const signalSockets = new Map<string, Map<string, WebSocket>>()
 
-/** Application-defined WebSocket close: same room + username already connected. */
 const WS_CLOSE_USERNAME_IN_USE = 4002
 
 function wsIsClaimed(ws: WebSocket): boolean {
@@ -103,31 +242,33 @@ function wsIsClaimed(ws: WebSocket): boolean {
   )
 }
 
-function registerSignalSocket(
-  room: string,
-  logicalId: string,
-  ws: WebSocket
-) {
+function registerSignalSocket(room: string, peerId: string, ws: WebSocket) {
   let m = signalSockets.get(room)
   if (!m) {
     m = new Map()
     signalSockets.set(room, m)
   }
-  const prev = m.get(logicalId)
+  const prev = m.get(peerId)
   if (prev && prev !== ws && wsIsClaimed(prev)) {
     ws.close(WS_CLOSE_USERNAME_IN_USE, 'username_in_use')
     return
   }
-  m.set(logicalId, ws)
+  m.set(peerId, ws)
   ws.on('close', () => {
     const mm = signalSockets.get(room)
-    if (mm?.get(logicalId) === ws) {
-      mm.delete(logicalId)
+    if (mm?.get(peerId) === ws) {
+      mm.delete(peerId)
     }
     if (mm && mm.size === 0) {
       signalSockets.delete(room)
     }
   })
+}
+
+type SignalClientMsg = {
+  v?: unknown
+  to?: unknown
+  body?: unknown
 }
 
 const wss = new WebSocketServer({ noServer: true })
@@ -136,28 +277,31 @@ wss.on('connection', (ws, req) => {
   const host = req.headers.host ?? 'localhost'
   const url = new URL(req.url ?? '/', `http://${host}`)
   const room = url.searchParams.get('room')
-  const logicalId = url.searchParams.get('logicalId')
-  if (!room || !logicalId || logicalIdRoom(logicalId) !== room) {
-    ws.close(4000, 'invalid room or logicalId')
+  const peerId = url.searchParams.get('peerId')
+  if (!room || !peerId || peerIdRoom(peerId) !== room) {
+    ws.close(4000, 'invalid room or peerId')
     return
   }
-  registerSignalSocket(room, logicalId, ws)
+  registerSignalSocket(room, peerId, ws)
   ws.on('message', (raw) => {
-    let msg: { to?: string; payload?: unknown }
+    let msg: SignalClientMsg
     try {
-      msg = JSON.parse(raw.toString()) as { to?: string; payload?: unknown }
+      msg = JSON.parse(raw.toString()) as SignalClientMsg
     } catch {
       return
     }
-    if (typeof msg.to !== 'string' || msg.payload === undefined) {
+    if (msg.v !== 2 || typeof msg.to !== 'string' || typeof msg.body !== 'object') {
       return
     }
-    if (logicalIdRoom(msg.to) !== room) {
+    if (msg.body === null || Array.isArray(msg.body)) {
+      return
+    }
+    if (peerIdRoom(msg.to) !== room) {
       return
     }
     const target = signalSockets.get(room)?.get(msg.to)
     if (target?.readyState === WebSocket.OPEN) {
-      target.send(JSON.stringify({ from: logicalId, payload: msg.payload }))
+      target.send(JSON.stringify({ v: 2, from: peerId, body: msg.body }))
     }
   })
 })
@@ -165,7 +309,7 @@ wss.on('connection', (ws, req) => {
 server.on('upgrade', (request, socket, head) => {
   const host = request.headers.host ?? 'localhost'
   const path = new URL(request.url ?? '/', `http://${host}`).pathname
-  if (path !== signalPath) {
+  if (path !== signalPathV2) {
     socket.destroy()
     return
   }
@@ -181,25 +325,21 @@ function listenHost(): string {
 
 function listenPort(): number {
   const raw = process.env.PORT?.trim()
-  const n = parseInt(raw && raw.length > 0 ? raw : '8080', 10)
+  const n = parseInt(raw && raw.length > 0 ? raw : '10234', 10)
   return Number.isFinite(n) && n > 0 && n < 65536 ? n : 8080
 }
 
 const httpPort = listenPort()
 
-app.post(v1('/room/:room/presence'), (req, res) => {
+app.post(v2('/room/:room/presence'), (req, res) => {
   const rid = roomParam(req.params.room)
-  const body = req.body as { logicalId?: string; addrs?: unknown }
-  if (!rid || typeof body.logicalId !== 'string' || !Array.isArray(body.addrs)) {
+  const body = req.body as { peerId?: string }
+  if (!rid || typeof body.peerId !== 'string') {
     res.status(400).json({ error: 'bad request' })
     return
   }
-  if (!body.addrs.every((a) => typeof a === 'string')) {
-    res.status(400).json({ error: 'addrs must be strings' })
-    return
-  }
-  if (logicalIdRoom(body.logicalId) !== rid) {
-    res.status(400).json({ error: 'logicalId does not match room' })
+  if (peerIdRoom(body.peerId) !== rid) {
+    res.status(400).json({ error: 'peerId does not match room' })
     return
   }
   let m = roomPresence.get(rid)
@@ -207,15 +347,14 @@ app.post(v1('/room/:room/presence'), (req, res) => {
     m = new Map()
     roomPresence.set(rid, m)
   }
-  m.set(body.logicalId, {
-    logicalId: body.logicalId,
-    addrs: body.addrs as string[],
+  m.set(body.peerId, {
+    peerId: body.peerId,
     lastSeen: Date.now(),
   })
   res.json({ ok: true })
 })
 
-app.get(v1('/room/:room/users'), (req, res) => {
+app.get(v2('/room/:room/users'), (req, res) => {
   const rid = roomParam(req.params.room)
   if (!rid) {
     res.status(400).send('Invalid room')
@@ -227,16 +366,10 @@ app.get(v1('/room/:room/users'), (req, res) => {
     res.json([])
     return
   }
-  res.json(
-    [...m.values()].map((v) => ({
-      id: v.logicalId,
-      addrs: v.addrs,
-    }))
-  )
+  res.json([...m.values()].map((v) => ({ id: v.peerId })))
 })
 
-/** Default room for this LAN segment (IPv4 private /24, etc.); used when SPA has no stored room. */
-app.get(v1('/default-room'), (req, res) => {
+app.get(v2('/default-room'), (req, res) => {
   const ip = getClientIp(req)
   const seed = ip ? subnetSeedForLanRoom(ip) : 'unknown'
   res.json({ room: roomCodeFromSeed(seed) })
@@ -253,7 +386,7 @@ server.listen(
   },
   () => {
     console.log(`Server is running on http://${host}:${httpPort}`)
-    console.log(`WebRTC signaling WebSocket path: ${signalPath}`)
+    console.log(`WebRTC signaling WebSocket path: ${signalPathV2}`)
   }
 )
 
