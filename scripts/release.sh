@@ -13,6 +13,6 @@ NODE_ENV=production npm run build
 
 cp -r web/dist release/
 cp server/webdrop-server.cjs release/
-cp .env release/.env
+cp .env.example release/.env.example
 chmod +x release/webdrop-server.cjs
 tar -czf webdrop.tar.gz -C release .
