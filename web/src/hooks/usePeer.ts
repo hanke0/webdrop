@@ -2,6 +2,7 @@ import { useSearchParams } from './useSearchParams'
 import { MutableRefObject, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import i18n from '../i18n'
+import fileDownload from 'js-file-download'
 import type {
   LazyConnection,
   PeerLink,
@@ -31,6 +32,13 @@ export function usePeer(
       open: (conn) => addConnection(wrap(conn)),
       error: (conn) => removeConnection(wrap(conn)),
       close: (conn) => removeConnection(wrap(conn)),
+      fileReceived: (_conn, name, blob) => {
+        toast(i18n.t('toast.fileReceived', { name }), { icon: '📁' })
+        fileDownload(blob, name)
+      },
+      fileOverflow: () => {
+        toast.error(i18n.t('toast.fileOverflow'))
+      },
       get fileOffer() {
         return fileOfferRef.current
       },
@@ -60,7 +68,6 @@ export function usePeer(
         }
         live = instance
         instance.onDisconnect(() => {
-          console.log('signaling disconnected:', instance.id)
           if (!cancelled) {
             setPeer(null)
             setRetryToken((token) => token + 1)

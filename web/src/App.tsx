@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
+import fileDownload from 'js-file-download'
 import { Card } from './components/card'
 import { ErrorPage } from './components/error-page'
 import {
@@ -163,7 +164,7 @@ export default function Home() {
         return
       }
       if (current === null && incomingFileRef.current === null) {
-        setPeerUi({ kind: 'chat', conn, peerId: conn.id })
+        setPeerUi({ kind: 'chat', conn, lazy: lazyFromPeer(conn), peerId: conn.id })
         return
       }
       toast(
@@ -203,6 +204,13 @@ export default function Home() {
         )
         removeUser(lazyFromPeer(conn))
       },
+      fileReceived: (_conn: PeerLink, name: string, blob: Blob) => {
+        toast(t('toast.fileReceived', { name }), { icon: '📁' })
+        fileDownload(blob, name)
+      },
+      fileOverflow: () => {
+        toast.error(t('toast.fileOverflow'))
+      },
       get fileOffer() {
         return fileOfferRef.current
       },
@@ -236,6 +244,7 @@ export default function Home() {
     }
     const unsubscribe = peer.onPeers((list) => {
       syncRoomUsers(peer, list)
+      setListRefreshBusy(false)
     })
     return unsubscribe
   }, [peer, syncRoomUsers])
@@ -246,7 +255,6 @@ export default function Home() {
     }
     setListRefreshBusy(true)
     peer.refreshPeers()
-    setTimeout(() => setListRefreshBusy(false), 400)
   }, [peer])
 
   const handleSendFileToPeer = useCallback(
@@ -266,10 +274,13 @@ export default function Home() {
       if (!peer) {
         return
       }
-      const conn = lazy.getReal(peer)
-      setPeerUi({ kind: 'chat', conn, peerId: conn.id })
+      let conn = lazy.getReal(peer)
+      if (conn.closed) {
+        conn = peer.connect(conn.id, outboundHandlers)
+      }
+      setPeerUi({ kind: 'chat', conn, lazy, peerId: conn.id })
     },
-    [peer]
+    [peer, outboundHandlers]
   )
 
   const handlePeerDialogClose = useCallback(() => {

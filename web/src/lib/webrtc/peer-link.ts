@@ -1,7 +1,4 @@
 import { getUserShowName } from '../room'
-import toast from 'react-hot-toast'
-import i18n from '../../i18n'
-import fileDownload from 'js-file-download'
 import {
   CTRL_LABEL,
   FILE_CHUNK,
@@ -28,6 +25,10 @@ export type PeerLinkCallback = {
     meta: FileOfferMeta,
     respond: (accepted: boolean) => void
   ) => void
+  /** Called when a file transfer completes successfully. UI should download `blob`. */
+  fileReceived?: (conn: PeerLink, name: string, blob: Blob) => void
+  /** Called when the sender exceeds the declared file size; connection is closed after. */
+  fileOverflow?: (conn: PeerLink) => void
   chatMessage?: (
     conn: PeerLink,
     msg: { name: string; payload: string }
@@ -402,7 +403,7 @@ export class PeerLink {
       if (sink.total + chunk.byteLength > sink.size) {
         /* Sender exceeded declared size: abort transfer and drop the connection. */
         this.fileSink = null
-        toast.error(i18n.t('toast.fileOverflow'))
+        this.callback.fileOverflow?.(this)
         this.close()
         return
       }
@@ -410,9 +411,8 @@ export class PeerLink {
       sink.total += chunk.byteLength
       if (sink.total >= sink.size) {
         const blob = new Blob(sink.received as BlobPart[], { type: sink.mime })
-        toast(i18n.t('toast.fileReceived', { name: sink.name }), { icon: '📁' })
-        fileDownload(blob, sink.name)
         this.fileSink = null
+        this.callback.fileReceived?.(this, sink.name, blob)
       }
     }
   }
@@ -467,6 +467,15 @@ export class PeerLink {
       return
     }
     if (msg.kind === 'file.offer') {
+      if (msg.size <= 0 || !Number.isFinite(msg.size)) {
+        void this.sendCtrl({
+          v: PROTOCOL_V,
+          kind: 'file.answer',
+          transferId: msg.transferId,
+          accept: false,
+        })
+        return
+      }
       const meta: FileOfferMeta = {
         transferId: msg.transferId,
         name: msg.name,
@@ -515,7 +524,6 @@ export class PeerLink {
   private async sendCtrl(msg: CtrlMessage): Promise<void> {
     const ch = this.ctrl
     if (!ch || !this.chCtrlOpen()) {
-      toast.error(i18n.t('conn.notOpen', { id: this.id }))
       throw new Error('Control channel not open')
     }
     ch.send(JSON.stringify(msg))
@@ -541,7 +549,6 @@ export class PeerLink {
 
   async sendFileWithConsent(file: File, timeoutMs = 300_000): Promise<void> {
     if (!this.chCtrlOpen() || !this.chFileOpen()) {
-      toast.error(i18n.t('conn.notOpen', { id: this.id }))
       throw new Error('connection not open')
     }
     const fch = this.file!

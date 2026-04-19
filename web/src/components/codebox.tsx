@@ -45,21 +45,21 @@ export function CodeBox(props: CodeBoxProps) {
         return
       }
     }
-    setCodeAt(i, value)
+    const newCode = [...code]
+    newCode[i] = value
+    setCode(newCode)
     if (value !== '') {
       focusOn(i, 1)
     }
-    const full = code.join('')
-    if (props.onChange) {
-      props.onChange(full)
-    }
+    props.onChange?.(newCode.join(''))
   }
 
   const setCodeAt = (i: number, value: string) => {
-    const newCode = code.map((v) => v)
-    newCode[i] = value
-    console.log('newCode', newCode)
-    setCode(newCode)
+    setCode((prev) => {
+      const next = [...prev]
+      next[i] = value
+      return next
+    })
   }
 
   const focusOn = (cur: number, step: number) => {
@@ -106,7 +106,7 @@ export function CodeBox(props: CodeBoxProps) {
         e.preventDefault()
         if (props.onFull) {
           const full = code.join('')
-          if (full.length != props.length) {
+          if (full.length !== props.length) {
             return
           }
           props.onFull(code.join(''))
@@ -121,21 +121,23 @@ export function CodeBox(props: CodeBoxProps) {
   const onPaste = (e: React.ClipboardEvent<HTMLInputElement>, cur: number) => {
     e.preventDefault()
     const pastedValue = e.clipboardData.getData('Text')
-    let currentInput = 0
+    const newCode = [...code]
+    let filled = 0
     for (let i = cur; i < props.length; i++) {
-      focusOn(i, 0)
-      let pastedCharacter = pastedValue.charAt(currentInput)
-      if (!pastedCharacter) {
-        return
-      }
-      if (props.beforeChange) {
-        pastedCharacter = props.beforeChange(pastedCharacter)
-      }
-      if (props.validator && !props.validator(pastedCharacter, i)) {
-        return
-      }
-      doms.current[i].value = pastedCharacter
-      currentInput++
+      let ch = pastedValue.charAt(filled)
+      if (!ch) break
+      if (props.beforeChange) ch = props.beforeChange(ch)
+      if (props.validator && !props.validator(ch, i)) break
+      newCode[i] = ch
+      filled++
+    }
+    if (filled === 0) return
+    setCode(newCode)
+    focusOn(cur + filled - 1, 0)
+    const full = newCode.join('')
+    props.onChange?.(full)
+    if (props.onFull && newCode.every((v) => v !== '')) {
+      props.onFull(full)
     }
   }
 

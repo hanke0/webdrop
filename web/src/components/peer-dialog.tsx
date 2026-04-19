@@ -13,7 +13,7 @@ export type PeerDialogState =
   | null
   | { kind: 'menu'; lazy: LazyConnection }
   | { kind: 'file'; lazy: LazyConnection }
-  | { kind: 'chat'; conn: PeerLink; peerId: string }
+  | { kind: 'chat'; conn: PeerLink; lazy: LazyConnection; peerId: string }
 
 export type ChatLine = {
   id: string
@@ -72,6 +72,10 @@ export function PeerDialog(props: PeerDialogProps) {
     }
     const text = draft.trim()
     if (!text) {
+      return
+    }
+    if (state.conn.closed) {
+      onOpenChat(state.lazy)
       return
     }
     if (!state.conn.opened) {

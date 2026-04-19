@@ -2,8 +2,17 @@ const MAX_BUFFERED = 8 * 1024 * 1024
 const LOW_WATER = MAX_BUFFERED / 2
 
 function waitForDrain(ch: RTCDataChannel): Promise<void> {
-  return new Promise((resolve) => {
-    ch.addEventListener('bufferedamountlow', () => resolve(), { once: true })
+  return new Promise((resolve, reject) => {
+    const onLow = () => {
+      ch.removeEventListener('close', onClose)
+      resolve()
+    }
+    const onClose = () => {
+      ch.removeEventListener('bufferedamountlow', onLow)
+      reject(new Error('file channel closed'))
+    }
+    ch.addEventListener('bufferedamountlow', onLow, { once: true })
+    ch.addEventListener('close', onClose, { once: true })
   })
 }
 

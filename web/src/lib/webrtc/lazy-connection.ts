@@ -17,7 +17,7 @@ export class LazyConnectionImpl implements LazyConnection {
   }
 
   getReal(peer: RoomSession) {
-    if (this.conn) {
+    if (this.conn && !this.conn.closed) {
       return this.conn
     }
     this.conn = this.buildConn(peer)
