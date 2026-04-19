@@ -16,6 +16,8 @@ export type SignalLinkEvents = {
   close: () => void
 }
 
+export const SIGNAL_WELCOME_TIMEOUT_MS = 10_000
+
 export function signalingClosedMessage(closeCode: number): string {
   return closeCode === SIGNAL_USERNAME_IN_USE_CODE
     ? 'This username is already in use in this room'
@@ -50,6 +52,7 @@ export class SignalLink {
   private readonly ws: WebSocket
   private events: Partial<SignalLinkEvents> = {}
   private closed = false
+  private closeNotified = false
 
   private constructor(ws: WebSocket, welcome: Welcome) {
     this.ws = ws
@@ -92,12 +95,20 @@ export class SignalLink {
     if (this.closed) {
       return
     }
-    this.closed = true
     try {
       this.ws.close()
     } catch {
       /* ignore */
     }
+  }
+
+  private notifyClose(): void {
+    if (this.closeNotified) {
+      return
+    }
+    this.closeNotified = true
+    this.closed = true
+    this.events.close?.()
   }
 
   private attachMessageLoop(): void {
@@ -141,11 +152,7 @@ export class SignalLink {
       }
     }
     this.ws.onclose = () => {
-      if (this.closed) {
-        return
-      }
-      this.closed = true
-      this.events.close?.()
+      this.notifyClose()
     }
   }
 }
@@ -153,7 +160,11 @@ export class SignalLink {
 async function waitForWelcome(ws: WebSocket): Promise<Welcome> {
   return await new Promise<Welcome>((resolve, reject) => {
     let finished = false
+    const timeout = setTimeout(() => {
+      fail(new Error('Timed out waiting for signaling welcome'))
+    }, SIGNAL_WELCOME_TIMEOUT_MS)
     const cleanup = () => {
+      clearTimeout(timeout)
       ws.removeEventListener('close', onClose)
       ws.removeEventListener('message', onMessage)
       ws.removeEventListener('error', onError)

@@ -226,6 +226,7 @@ export class PeerLink {
   ): Promise<PeerLink | null> {
     const tag = `in ${signalPeerId}`
     const pc = new RTCPeerConnection(rtcConfig)
+    let supersededByOffer = false
     session.trackPc(pc)
     attachPcLogging(pc, tag)
 
@@ -236,6 +237,14 @@ export class PeerLink {
       void (async () => {
         if (body.type === 'ice') {
           icePipe.onSignalIce(body.candidate)
+          return
+        }
+        if (body.type === 'offer') {
+          supersededByOffer = true
+          webrtcLog(tag, 'replacement offer received; restarting inbound negotiation')
+          session.unregisterSignalHandler(signalPeerId)
+          pc.close()
+          await session.acceptIncomingOffer(signalPeerId, body.sdp, cb)
         }
       })()
     })
@@ -285,7 +294,9 @@ export class PeerLink {
         signalPeerId,
       })
     } catch (e) {
-      console.warn(`[webrtc ${tag}] acceptOffer failed:`, e)
+      if (!supersededByOffer) {
+        console.warn(`[webrtc ${tag}] acceptOffer failed:`, e)
+      }
       session.unregisterSignalHandler(signalPeerId)
       pc.close()
       return null
@@ -295,6 +306,7 @@ export class PeerLink {
   private async openOutbound(): Promise<void> {
     const remotePeerId = this.id
     const tag = `out ${remotePeerId}`
+    let supersededByOffer = false
 
     const pc = new RTCPeerConnection(rtcConfig)
     this.pc = pc
@@ -321,6 +333,11 @@ export class PeerLink {
           }
         } else if (body.type === 'ice') {
           icePipe.onSignalIce(body.candidate)
+        } else if (body.type === 'offer') {
+          supersededByOffer = true
+          webrtcLog(tag, 'offer received while dialing; switching to inbound negotiation')
+          this.close()
+          await this.session.acceptIncomingOffer(remotePeerId, body.sdp, this.callback)
         }
       })()
     })
@@ -358,6 +375,9 @@ export class PeerLink {
       this.settleReady(null)
       this.callback.open(this)
     } catch (e) {
+      if (supersededByOffer) {
+        return
+      }
       this.session.unregisterSignalHandler(remotePeerId)
       const err = e instanceof Error ? e : new Error(String(e))
       this.err = err

@@ -19,6 +19,7 @@ export function usePeer(
 ) {
   const search = useSearchParams()
   const [peer, setPeer] = useState<RoomSession | null>(null)
+  const [retryToken, setRetryToken] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -62,6 +63,7 @@ export function usePeer(
           console.log('signaling disconnected:', instance.id)
           if (!cancelled) {
             setPeer(null)
+            setRetryToken((token) => token + 1)
           }
         })
         instance.onClose(() => {
@@ -91,6 +93,7 @@ export function usePeer(
     fileOfferRef,
     chatMessageRef,
     chatAckRef,
+    retryToken,
   ])
 
   return peer

@@ -39,8 +39,7 @@ export function useUsers() {
     setState((prev) => {
       const n = { ...prev }
       n.conns = remove(conn, n.conns)
-      n.roomUsers = remove(conn, n.roomUsers)
-      if (n.conns.length === prev.conns.length && n.roomUsers.length === prev.roomUsers.length) {
+      if (n.conns.length === prev.conns.length) {
         return prev
       }
       return n

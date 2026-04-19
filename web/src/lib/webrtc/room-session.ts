@@ -98,9 +98,7 @@ export class RoomSession implements SessionRuntime {
       if (this.closed) {
         return
       }
-      this.closed = true
-      this.onDisconnectCb?.()
-      this.onCloseCb?.()
+      this.teardown(true)
     })
   }
 
@@ -146,8 +144,11 @@ export class RoomSession implements SessionRuntime {
     })
   }
 
-  private async acceptIncomingOffer(from: string, sdp: RTCSessionDescriptionInit) {
-    const cb = this.inboundCallback
+  async acceptIncomingOffer(
+    from: string,
+    sdp: RTCSessionDescriptionInit,
+    cb = this.inboundCallback
+  ): Promise<void> {
     if (!cb || this.closed) {
       return
     }
@@ -175,10 +176,7 @@ export class RoomSession implements SessionRuntime {
     })
   }
 
-  close(): void {
-    if (this.closed) {
-      return
-    }
+  private teardown(disconnected: boolean): void {
     this.closed = true
     for (const c of this.inboundByPeer.values()) {
       c.close()
@@ -189,6 +187,17 @@ export class RoomSession implements SessionRuntime {
       pc.close()
     }
     this.pcs.clear()
+    if (disconnected) {
+      this.onDisconnectCb?.()
+    }
+    this.onCloseCb?.()
+  }
+
+  close(): void {
+    if (this.closed) {
+      return
+    }
+    this.teardown(false)
     this.link.close()
   }
 
