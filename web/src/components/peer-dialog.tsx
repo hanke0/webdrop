@@ -15,7 +15,13 @@ export type PeerDialogState =
   | { kind: 'file'; lazy: LazyConnection }
   | { kind: 'chat'; conn: PeerLink; peerId: string }
 
-export type ChatLine = { id: string; self: boolean; text: string }
+export type ChatLine = {
+  id: string
+  self: boolean
+  text: string
+  /** Outbound only: set while waiting for the receiver's `chat.ack`. */
+  pending?: boolean
+}
 
 export type PeerDialogProps = {
   state: PeerDialogState
@@ -171,13 +177,26 @@ export function PeerDialog(props: PeerDialogProps) {
             {lines.map((line) => (
               <div
                 key={line.id}
-                className={`py-2 px-3 rounded-xl text-sm mb-2 max-w-[92%] break-words transition-opacity duration-200 ${
-                  line.self
-                    ? 'ml-auto bg-[color-mix(in_oklab,var(--wd-accent)_22%,transparent)] text-[var(--wd-text)] border border-[color-mix(in_oklab,var(--wd-accent)_35%,transparent)]'
-                    : 'mr-auto bg-[var(--wd-surface)] border border-[var(--wd-border)] text-[var(--wd-text)]'
+                className={`flex items-end gap-1.5 mb-2 ${
+                  line.self ? 'justify-end' : 'justify-start'
                 }`}
               >
-                {line.text}
+                <div
+                  className={`py-2 px-3 rounded-xl text-sm max-w-[92%] break-words transition-opacity duration-200 ${
+                    line.self
+                      ? 'bg-[color-mix(in_oklab,var(--wd-accent)_22%,transparent)] text-[var(--wd-text)] border border-[color-mix(in_oklab,var(--wd-accent)_35%,transparent)]'
+                      : 'bg-[var(--wd-surface)] border border-[var(--wd-border)] text-[var(--wd-text)]'
+                  }`}
+                >
+                  {line.text}
+                </div>
+                {line.self && line.pending && (
+                  <span
+                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-[var(--wd-border-strong)] border-t-[var(--wd-accent)] animate-spin shrink-0"
+                    aria-label={t('peer.delivering')}
+                    role="status"
+                  />
+                )}
               </div>
             ))}
             <div ref={listEndRef} />

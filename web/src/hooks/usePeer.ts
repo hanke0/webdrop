@@ -14,7 +14,8 @@ export function usePeer(
   addConnection: (conn: LazyConnection) => void,
   removeConnection: (conn: LazyConnection) => void,
   fileOfferRef: MutableRefObject<PeerLinkCallback['fileOffer'] | undefined>,
-  chatMessageRef: MutableRefObject<PeerLinkCallback['chatMessage'] | undefined>
+  chatMessageRef: MutableRefObject<PeerLinkCallback['chatMessage'] | undefined>,
+  chatAckRef: MutableRefObject<PeerLinkCallback['chatAck'] | undefined>
 ) {
   const search = useSearchParams()
   const [peer, setPeer] = useState<RoomSession | null>(null)
@@ -34,6 +35,9 @@ export function usePeer(
       },
       get chatMessage() {
         return chatMessageRef.current
+      },
+      get chatAck() {
+        return chatAckRef.current
       },
     }
 
@@ -80,7 +84,14 @@ export function usePeer(
       live?.close()
       setPeer(null)
     }
-  }, [search, addConnection, removeConnection, fileOfferRef, chatMessageRef])
+  }, [
+    search,
+    addConnection,
+    removeConnection,
+    fileOfferRef,
+    chatMessageRef,
+    chatAckRef,
+  ])
 
   return peer
 }

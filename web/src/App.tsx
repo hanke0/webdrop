@@ -105,12 +105,18 @@ export default function Home() {
   )
 
   const appendChatLine = useCallback(
-    (peerId: string, self: boolean, text: string) => {
+    (
+      peerId: string,
+      self: boolean,
+      text: string,
+      extras?: { id?: string; pending?: boolean }
+    ) => {
       setChatLines((prev) => {
         const row: ChatLine = {
-          id: crypto.randomUUID(),
+          id: extras?.id ?? crypto.randomUUID(),
           self,
           text,
+          pending: extras?.pending,
         }
         const list = prev[peerId] ?? []
         return { ...prev, [peerId]: [...list, row] }
@@ -119,10 +125,36 @@ export default function Home() {
     []
   )
 
+  const ackChatLine = useCallback((peerId: string, messageId: string) => {
+    setChatLines((prev) => {
+      const list = prev[peerId]
+      if (!list) {
+        return prev
+      }
+      const idx = list.findIndex((l) => l.id === messageId && l.pending)
+      if (idx < 0) {
+        return prev
+      }
+      const next = list.slice()
+      next[idx] = { ...next[idx], pending: false }
+      return { ...prev, [peerId]: next }
+    })
+  }, [])
+
   const chatMessageRef = useRef<
     | ((conn: PeerLink, msg: { name: string; payload: string }) => void)
     | undefined
   >(undefined)
+  const chatAckRef = useRef<
+    ((conn: PeerLink, messageId: string) => void) | undefined
+  >(undefined)
+
+  const handleChatAck = useCallback(
+    (conn: PeerLink, messageId: string) => {
+      ackChatLine(conn.id, messageId)
+    },
+    [ackChatLine]
+  )
 
   const handleChatMessage = useCallback(
     (conn: PeerLink, msg: { name: string; payload: string }) => {
@@ -151,9 +183,16 @@ export default function Home() {
   useEffect(() => {
     fileOfferRef.current = handleFileOffer
     chatMessageRef.current = handleChatMessage
-  }, [handleFileOffer, handleChatMessage])
+    chatAckRef.current = handleChatAck
+  }, [handleFileOffer, handleChatMessage, handleChatAck])
 
-  const peer = usePeer(addUser, removeUser, fileOfferRef, chatMessageRef)
+  const peer = usePeer(
+    addUser,
+    removeUser,
+    fileOfferRef,
+    chatMessageRef,
+    chatAckRef
+  )
 
   const outboundHandlers = useMemo(
     () => ({
@@ -170,6 +209,9 @@ export default function Home() {
       },
       get chatMessage() {
         return chatMessageRef.current
+      },
+      get chatAck() {
+        return chatAckRef.current
       },
     }),
     [addUser, removeUser, t]
@@ -252,8 +294,11 @@ export default function Home() {
   }
 
   const handleSendChat = (conn: PeerLink, text: string) => {
-    conn.sendChatText(text)
-    appendChatLine(conn.id, true, text)
+    const messageId = conn.sendChatText(text)
+    if (!messageId) {
+      return
+    }
+    appendChatLine(conn.id, true, text, { id: messageId, pending: true })
   }
 
   return (

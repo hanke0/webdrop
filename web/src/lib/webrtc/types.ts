@@ -11,9 +11,10 @@ export type CtrlMessage =
       v: 3
       kind: 'chat'
       text: string
-      messageId?: string
+      messageId: string
       fromName?: string
     }
+  | { v: 3; kind: 'chat.ack'; messageId: string }
   | {
       v: 3
       kind: 'file.offer'

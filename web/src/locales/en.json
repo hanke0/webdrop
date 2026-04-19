@@ -48,7 +48,8 @@
     "chatWith": "Chat with {{name}}",
     "noMessages": "No messages yet. Type below to start.",
     "chatPlaceholder": "Message — Enter to send · Shift+Enter for newline",
-    "sendMessage": "Send"
+    "sendMessage": "Send",
+    "delivering": "Delivering…"
   },
   "upload": {
     "clickSelect": "Click to choose",

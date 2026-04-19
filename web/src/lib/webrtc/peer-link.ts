@@ -32,6 +32,8 @@ export type PeerLinkCallback = {
     conn: PeerLink,
     msg: { name: string; payload: string }
   ) => void
+  /** Receiver-side acknowledgement: remote confirmed delivery of `messageId`. */
+  chatAck?: (conn: PeerLink, messageId: string) => void
 }
 
 function waitForOpen(dc: RTCDataChannel): Promise<void> {
@@ -400,6 +402,19 @@ export class PeerLink {
       if (text) {
         this.callback.chatMessage?.(this, { name, payload: text })
       }
+      if (msg.messageId) {
+        void this.sendCtrl({
+          v: PROTOCOL_V,
+          kind: 'chat.ack',
+          messageId: msg.messageId,
+        })
+      }
+      return
+    }
+    if (msg.kind === 'chat.ack') {
+      if (msg.messageId) {
+        this.callback.chatAck?.(this, msg.messageId)
+      }
       return
     }
     if (msg.kind === 'file.answer') {
@@ -462,19 +477,22 @@ export class PeerLink {
     ch.send(JSON.stringify(msg))
   }
 
-  sendChatText(body: string): void {
+  /** Returns the `messageId` so the UI can track delivery via `chat.ack`. */
+  sendChatText(body: string): string | null {
     const t = body.trim()
     if (!t) {
-      return
+      return null
     }
     const fromName = getUserShowName(this.session.id)
+    const messageId = crypto.randomUUID()
     void this.sendCtrl({
       v: PROTOCOL_V,
       kind: 'chat',
-      messageId: crypto.randomUUID(),
+      messageId,
       text: t,
       fromName,
     })
+    return messageId
   }
 
   async sendFileWithConsent(file: File, timeoutMs = 300_000): Promise<void> {
