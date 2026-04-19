@@ -151,9 +151,17 @@ export class PeerLink {
     total: number
   } | null = null
   private finallyCb?: () => void
+  private readyPromise: Promise<void>
+  private readyResolve!: () => void
+  private readyReject!: (err: Error) => void
 
   get ok() {
     return !this.err && !this.closed
+  }
+
+  /** Resolves once data channels are open and session.ready has been exchanged. */
+  ready(): Promise<void> {
+    return this.readyPromise
   }
 
   onFinally(cb: () => void) {
@@ -174,6 +182,10 @@ export class PeerLink {
     this.id = remotePeerId
     this.session = session
     this.callback = callback
+    this.readyPromise = new Promise((resolve, reject) => {
+      this.readyResolve = resolve
+      this.readyReject = reject
+    })
     if (existing) {
       this.pc = existing.pc
       this.ctrl = existing.ctrl
@@ -182,6 +194,7 @@ export class PeerLink {
       this.bindFileReceive()
       this.bindCtrlApp()
       this.opened = true
+      this.readyResolve()
       this.callback.open(this)
     } else {
       this.signalPeerId = null
@@ -301,6 +314,7 @@ export class PeerLink {
       this.bindCtrlApp()
 
       this.opened = true
+      this.readyResolve()
       this.callback.open(this)
     } catch (e) {
       this.session.unregisterSignalHandler(remotePeerId)
@@ -308,6 +322,7 @@ export class PeerLink {
       this.err = err
       this.closed = true
       pc.close()
+      this.readyReject(err)
       this.callback.error(this, err)
     }
   }

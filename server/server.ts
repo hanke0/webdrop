@@ -262,6 +262,13 @@ function registerSignalSocket(room: string, peerId: string, ws: WebSocket) {
     if (mm && mm.size === 0) {
       signalSockets.delete(room)
     }
+    const pm = roomPresence.get(room)
+    if (pm) {
+      pm.delete(peerId)
+      if (pm.size === 0) {
+        roomPresence.delete(room)
+      }
+    }
   })
 }
 

@@ -16,7 +16,6 @@ function lazyFromPeer(conn: PeerLink): LazyConnection {
 import { usePeer } from './hooks/usePeer'
 import { Main } from './components/main'
 import { fetchRoomUsers } from './lib/api'
-import { sleep } from './lib/util'
 import { UserText } from './components/user-text'
 import {
   FileReceiveDialog,
@@ -49,9 +48,7 @@ const generateListItem = ({ id }: LazyConnection) => {
 }
 
 const sendFile = async (conn: PeerLink, file: File) => {
-  if (!conn.opened) {
-    await sleep(500)
-  }
+  await conn.ready()
   await conn.sendFileWithConsent(file)
 }
 
