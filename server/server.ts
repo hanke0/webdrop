@@ -9,7 +9,13 @@ import { WebSocketServer, WebSocket } from 'ws'
 
 // --- LAN room / client IP (default-room seeding) ---
 
-/** Client IP string from proxy headers or socket (Express / bare IncomingMessage). */
+/**
+ * Client IP string from proxy headers or socket (Express / bare IncomingMessage).
+ *
+ * NOTE: x-real-ip and x-forwarded-for are trusted as-is. This is safe only when
+ * a trusted reverse proxy (e.g. nginx) sits in front. If the server is exposed
+ * directly, clients can spoof these headers to land in any LAN room.
+ */
 function getClientIp(req: IncomingMessage): string {
   const xReal = req.headers['x-real-ip']
   const forwarded = req.headers['x-forwarded-for']
@@ -222,13 +228,15 @@ type ClientMsg = {
   body?: unknown
 }
 
-const wss = new WebSocketServer({ noServer: true })
+// Signaling messages are small (SDP / ICE candidates); cap at 64 KB to prevent
+// large-payload abuse on the parse/stringify path.
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 })
 
 wss.on('connection', (ws, req) => {
   const host = req.headers.host ?? 'localhost'
   const url = new URL(req.url ?? '/', `http://${host}`)
   const user = (url.searchParams.get('user') ?? '').toLowerCase()
-  if (!USER_RE.test(user)) {
+  if (!USER_RE.test(user) || user.length > 60) {
     ws.close(WS_CLOSE_BAD_REQUEST, 'invalid user')
     return
   }
@@ -346,6 +354,6 @@ server.listen(
 )
 
 server.on('error', (error) => {
-  console.log('Error: ', error)
+  console.error('Server error:', error)
   process.exit(1)
 })
