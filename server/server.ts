@@ -176,6 +176,10 @@ const USER_RE = /^[a-z]+-[a-z]+$/
 
 const WS_CLOSE_BAD_REQUEST = 4000
 const WS_CLOSE_USERNAME_IN_USE = 4002
+const WS_CLOSE_PING_TIMEOUT = 4003
+
+const PING_WINDOW_MS = 4_000
+const PING_MAX_MISSES = 2
 
 type Peer = {
   peerId: string
@@ -260,6 +264,20 @@ wss.on('connection', (ws, req) => {
   const peer: Peer = { peerId, room, ws }
   m.set(peerId, peer)
 
+  let lastPingAt = Date.now()
+  let missedPingCount = 0
+  const pingCheckTimer = setInterval(() => {
+    const now = Date.now()
+    if (now - lastPingAt < PING_WINDOW_MS) {
+      missedPingCount = 0
+      return
+    }
+    missedPingCount += 1
+    if (missedPingCount >= PING_MAX_MISSES) {
+      ws.close(WS_CLOSE_PING_TIMEOUT, 'ping_timeout')
+    }
+  }, PING_WINDOW_MS)
+
   send(ws, {
     type: 'welcome',
     room,
@@ -297,9 +315,16 @@ wss.on('connection', (ws, req) => {
       send(ws, { type: 'peers', peers: roomPeerIds(room, peerId) })
       return
     }
+    if (msg.type === 'ping') {
+      lastPingAt = Date.now()
+      missedPingCount = 0
+      send(ws, { type: 'pong' })
+      return
+    }
   })
 
   ws.on('close', () => {
+    clearInterval(pingCheckTimer)
     const mm = rooms.get(room)
     if (!mm) {
       return

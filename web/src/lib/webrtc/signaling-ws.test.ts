@@ -151,4 +151,22 @@ describe('SignalLink', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('sends periodic ping messages after opening', async () => {
+    vi.useFakeTimers()
+
+    const openPromise = SignalLink.open({ user: 'happy-cat', room: 'ABC123' })
+    const ws = FakeWebSocket.instances[0]
+    ws.emitMessage({
+      type: 'welcome',
+      room: 'ABC123',
+      peerId: 'ABC123-happy-cat',
+      peers: [],
+    })
+
+    await openPromise
+    await vi.advanceTimersByTimeAsync(2_100)
+
+    expect(ws.sent).toContain(JSON.stringify({ type: 'ping' }))
+  })
 })

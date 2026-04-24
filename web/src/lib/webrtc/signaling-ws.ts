@@ -17,6 +17,7 @@ export type SignalLinkEvents = {
 }
 
 export const SIGNAL_WELCOME_TIMEOUT_MS = 10_000
+const SIGNAL_PING_INTERVAL_MS = 2_000
 
 export function signalingClosedMessage(closeCode: number): string {
   return closeCode === SIGNAL_USERNAME_IN_USE_CODE
@@ -40,6 +41,7 @@ type ServerMsg =
   | { type: 'peer.leave'; peerId: string }
   | { type: 'peers'; peers: string[] }
   | { type: 'signal'; from: string; body: SignalBody }
+  | { type: 'pong' }
 
 /**
  * Single-socket link to the server: handles the welcome handshake, dispatches
@@ -53,6 +55,7 @@ export class SignalLink {
   private events: Partial<SignalLinkEvents> = {}
   private closed = false
   private closeNotified = false
+  private pingTimer: ReturnType<typeof setInterval> | null = null
 
   private constructor(ws: WebSocket, welcome: Welcome) {
     this.ws = ws
@@ -60,6 +63,7 @@ export class SignalLink {
     this.peerId = welcome.peerId
     this.initialPeers = welcome.peers
     this.attachMessageLoop()
+    this.startPingLoop()
   }
 
   static async open(options: {
@@ -106,9 +110,22 @@ export class SignalLink {
     if (this.closeNotified) {
       return
     }
+    if (this.pingTimer !== null) {
+      clearInterval(this.pingTimer)
+      this.pingTimer = null
+    }
     this.closeNotified = true
     this.closed = true
     this.events.close?.()
+  }
+
+  private startPingLoop(): void {
+    this.pingTimer = setInterval(() => {
+      if (this.ws.readyState !== WebSocket.OPEN) {
+        return
+      }
+      this.ws.send(JSON.stringify({ type: 'ping' }))
+    }, SIGNAL_PING_INTERVAL_MS)
   }
 
   private attachMessageLoop(): void {
@@ -146,6 +163,8 @@ export class SignalLink {
           ) {
             this.events.signal?.(parsed.from, parsed.body as SignalBody)
           }
+          return
+        case 'pong':
           return
         default:
           return
