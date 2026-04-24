@@ -21,6 +21,8 @@ export type ChatLine = {
   text: string
   /** Outbound only: set while waiting for the receiver's `chat.ack`. */
   pending?: boolean
+  /** Outbound only: set when the send failed (e.g. channel dropped mid-send). */
+  failed?: boolean
 }
 
 export type PeerDialogProps = {
@@ -33,6 +35,7 @@ export type PeerDialogProps = {
   onSendFile: (conn: PeerLink, file: File) => Promise<void>
   onOpenChat: (lazy: LazyConnection) => void
   onSendChat: (conn: PeerLink, text: string) => void
+  onRetryChat: (conn: PeerLink, lazy: LazyConnection, line: ChatLine) => void
 }
 
 export function PeerDialog(props: PeerDialogProps) {
@@ -46,6 +49,7 @@ export function PeerDialog(props: PeerDialogProps) {
     onSendFile,
     onOpenChat,
     onSendChat,
+    onRetryChat,
   } = props
   const [file, setFile] = useState(null as File | null)
   const [sendingFile, setSendingFile] = useState(false)
@@ -64,6 +68,12 @@ export function PeerDialog(props: PeerDialogProps) {
     setSendingFile(false)
     setDraft('')
     onClose()
+  }
+
+  const retryLine = (line: ChatLine) => {
+    if (state?.kind !== 'chat') return
+    onRetryChat(state.conn, state.lazy, line)
+    setDraft(line.text)
   }
 
   const submitChat = () => {
@@ -216,6 +226,17 @@ export function PeerDialog(props: PeerDialogProps) {
                     aria-label={t('peer.delivering')}
                     role="status"
                   />
+                )}
+                {line.self && line.failed && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-white text-[9px] font-bold shrink-0 hover:bg-red-600 active:scale-95 transition-colors cursor-pointer"
+                    onClick={() => retryLine(line)}
+                    aria-label={t('peer.sendError')}
+                    title={t('peer.sendError')}
+                  >
+                    !
+                  </button>
                 )}
               </div>
             ))}

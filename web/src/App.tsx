@@ -125,6 +125,18 @@ export default function Home() {
     []
   )
 
+  const failChatLine = useCallback((peerId: string, messageId: string) => {
+    setChatLines((prev) => {
+      const list = prev[peerId]
+      if (!list) return prev
+      const idx = list.findIndex((l) => l.id === messageId)
+      if (idx < 0) return prev
+      const next = list.slice()
+      next[idx] = { ...next[idx], pending: false, failed: true }
+      return { ...prev, [peerId]: next }
+    })
+  }, [])
+
   const ackChatLine = useCallback((peerId: string, messageId: string) => {
     setChatLines((prev) => {
       const list = prev[peerId]
@@ -289,13 +301,34 @@ export default function Home() {
 
   const handleSendChat = useCallback(
     (conn: PeerLink, text: string) => {
-      const messageId = conn.sendChatText(text)
+      const messageId = conn.sendChatText(text, (id) => failChatLine(conn.id, id))
       if (!messageId) {
         return
       }
       appendChatLine(conn.id, true, text, { id: messageId, pending: true })
     },
-    [appendChatLine]
+    [appendChatLine, failChatLine]
+  )
+
+  const handleRetryChat = useCallback(
+    (conn: PeerLink, lazy: LazyConnection, line: ChatLine) => {
+      setChatLines((prev) => {
+        const list = prev[conn.id]
+        if (!list) return prev
+        return { ...prev, [conn.id]: list.filter((l) => l.id !== line.id) }
+      })
+      if (!peer) return
+      const current = lazy.getReal(peer)
+      if (current.closed) {
+        const newConn = peer.connect(current.id, outboundHandlers)
+        setPeerUi((prev) =>
+          prev?.kind === 'chat' && prev.peerId === conn.id
+            ? { kind: 'chat', conn: newConn, lazy, peerId: newConn.id }
+            : prev
+        )
+      }
+    },
+    [peer, outboundHandlers]
   )
 
   if (!peer) {
@@ -325,6 +358,7 @@ export default function Home() {
         onSendFile={handleSendFileToPeer}
         onOpenChat={handleOpenChat}
         onSendChat={handleSendChat}
+        onRetryChat={handleRetryChat}
       />
       <Main>
         <div className="wd-stagger flex w-full flex-col gap-4">

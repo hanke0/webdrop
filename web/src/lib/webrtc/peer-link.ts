@@ -530,20 +530,20 @@ export class PeerLink {
   }
 
   /** Returns the `messageId` so the UI can track delivery via `chat.ack`. */
-  sendChatText(body: string): string | null {
+  sendChatText(body: string, onError?: (messageId: string) => void): string | null {
     const t = body.trim()
     if (!t) {
       return null
     }
     const fromName = getUserShowName(this.session.id)
     const messageId = crypto.randomUUID()
-    void this.sendCtrl({
+    this.sendCtrl({
       v: PROTOCOL_V,
       kind: 'chat',
       messageId,
       text: t,
       fromName,
-    })
+    }).catch(() => onError?.(messageId))
     return messageId
   }
 

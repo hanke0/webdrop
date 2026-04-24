@@ -45,7 +45,8 @@
     "noMessages": "No messages yet. Type below to start.",
     "chatPlaceholder": "Message — Enter to send · Shift+Enter for newline",
     "sendMessage": "Send",
-    "delivering": "Delivering…"
+    "delivering": "Delivering…",
+    "sendError": "Failed to send — click to retry"
   },
   "upload": {
     "clickSelect": "Click to choose",
