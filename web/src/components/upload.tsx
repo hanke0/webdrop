@@ -20,6 +20,7 @@ export function Upload(props: UploadProps) {
     if (files && files.length > 0) {
       props.callback(files[0])
     }
+    event.target.value = ''
   }
 
   const content = props.children || (
@@ -77,7 +78,7 @@ export function Upload(props: UploadProps) {
           onChange={onFileChange}
           id={id}
           type="file"
-          className="hidden"
+          className="sr-only"
         />
       </label>
     </div>

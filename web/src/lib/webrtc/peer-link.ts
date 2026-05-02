@@ -551,6 +551,14 @@ export class PeerLink {
     if (!this.chCtrlOpen() || !this.chFileOpen()) {
       throw new Error('connection not open')
     }
+    /* Mobile Safari often reports `size: 0` for Photos picks; the receiver rejects
+     * non-positive sizes. Reading materializes real byte length for the offer. */
+    if (file.size === 0) {
+      const buf = await file.arrayBuffer()
+      file = new File([buf], file.name, {
+        type: file.type || 'application/octet-stream',
+      })
+    }
     const fch = this.file!
     const transferId = crypto.randomUUID()
     const accepted = await new Promise<boolean>((resolve, reject) => {
