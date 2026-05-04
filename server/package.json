@@ -15,7 +15,7 @@
     "@types/express": "^5.0.6",
     "@types/morgan": "^1.9.10",
     "@types/ws": "^8.18.1",
-    "esbuild": "^0.25.12"
+    "esbuild": "^0.28.0"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
