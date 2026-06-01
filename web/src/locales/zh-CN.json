@@ -69,12 +69,18 @@
   },
   "room": {
     "title": "房间与邀请",
-    "description": "修改下方房间码可切换房间；分享链接或二维码邀请他人加入。",
-    "copyLink": "点击复制房间链接",
+    "description": "修改房间码后点「加入房间」切换；可复制房间码或链接邀请他人。",
+    "codeLabel": "房间码",
+    "codePlaceholder": "6 位字母或数字",
+    "copyCode": "复制房间码",
+    "copyCodeSuccess": "房间码已复制",
+    "joinRoom": "加入房间",
+    "alreadyHere": "你已在该房间",
+    "copyLink": "复制房间链接",
     "copySuccess": "房间链接已复制",
-    "copyFail": "复制链接失败",
+    "copyFail": "复制失败",
     "qrHint": "也可让对方扫描下方二维码",
-    "invalidCode": "房间码无效"
+    "invalidCode": "请输入 6 位房间码（A–Z、0–9）"
   },
   "user": {
     "identity": "当前身份",

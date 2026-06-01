@@ -69,12 +69,18 @@
   },
   "room": {
     "title": "Room & invite",
-    "description": "Change the room code below to switch rooms; share the link or QR code to invite others.",
+    "description": "Edit the room code and tap Join to switch rooms. Copy the code or link to invite others.",
+    "codeLabel": "Room code",
+    "codePlaceholder": "6 letters or digits",
+    "copyCode": "Copy code",
+    "copyCodeSuccess": "Room code copied",
+    "joinRoom": "Join room",
+    "alreadyHere": "You are already in this room",
     "copyLink": "Copy room link",
     "copySuccess": "Room link copied",
-    "copyFail": "Could not copy link",
+    "copyFail": "Could not copy",
     "qrHint": "Or let them scan the QR code below",
-    "invalidCode": "Invalid room code"
+    "invalidCode": "Enter a 6-character room code (A–Z, 0–9)"
   },
   "user": {
     "identity": "You",

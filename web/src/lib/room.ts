@@ -5,6 +5,11 @@ export function isGoodRoom(room: string): boolean {
   return roomRE.test(room)
 }
 
+/** Uppercase A–Z / 0–9 only, max 6 characters (room code input). */
+export function normalizeRoomCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+}
+
 const usernameRE = /^[a-z]+-[a-z]+$/
 export function isGoodUser(user: string): boolean {
   return usernameRE.test(user) && icons.includes(user.split('-')[1])
